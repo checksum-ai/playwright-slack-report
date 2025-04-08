@@ -80,7 +80,7 @@ typings/
 
 # Nuxt.js build / generate output
 .nuxt
-dist
+
 
 # Gatsby files
 .cache/
@@ -108,7 +108,6 @@ dist
 
 test-results/
 build/
-dist/
 
 # VS Code files
 .vscode
