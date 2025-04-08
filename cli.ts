@@ -11,6 +11,7 @@ import doPreChecks from './src/cli/cli_pre_checks';
 import { ICliConfig } from './src/cli/cli_schema';
 import { Meta, SummaryResults } from './src';
 import SlackWebhookClient from './src/SlackWebhookClient';
+import DiscordWebhookClient from './src/DiscordWebhookClient';
 
 const program = new Command();
 
@@ -42,6 +43,29 @@ program
     const resultSummary = await resultsParser.parseFromJsonFile(
       preCheckResult.jsonPath!,
     );
+
+    let summaryResults = resultSummary;
+    const meta = replaceEnvVars(config.meta);
+    summaryResults = { ...resultSummary, meta };
+
+    if (config.sendUsingDiscordWebhook) {
+      const discordWebhookClient = new DiscordWebhookClient({
+        webhookUrl: config.sendUsingDiscordWebhook.webhookUrl,
+        username: config.sendUsingDiscordWebhook.username,
+        avatarUrl: config.sendUsingDiscordWebhook.avatarUrl,
+        embedColor: config.sendUsingDiscordWebhook.embedColor,
+      });
+
+      const webhookResult = await discordWebhookClient.sendMessage({
+        maxNumberOfFailures: config.maxNumberOfFailures,
+        summaryResults,
+      });
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify(webhookResult, null, 2));
+      console.log('✅ Results sent to Discord');
+      process.exit(0);
+    }
+
     if (config.sendUsingBot) {
       const slackClient = new SlackClient(
         new WebClient(process.env.SLACK_BOT_USER_OAUTH_TOKEN, {
@@ -106,8 +130,8 @@ async function sendResultsUsingBot({
     console.log({ config });
   }
   if (
-    resultSummary.failures.length === 0
-    && config.sendResults === 'on-failure'
+    resultSummary.failures.length === 0 &&
+    config.sendResults === 'on-failure'
   ) {
     console.log('⏩ Slack CLI reporter - no failures found');
     return true;
@@ -147,8 +171,8 @@ async function sendResultsUsingBot({
     }
 
     if (
-      result.filter((r) => !r.outcome.includes('✅ Message sent to')).length
-      !== 0
+      result.filter((r) => !r.outcome.includes('✅ Message sent to')).length !==
+      0
     ) {
       return false;
     }

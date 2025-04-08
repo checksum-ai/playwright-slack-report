@@ -2,6 +2,14 @@ import { existsSync, PathLike, readFileSync } from 'fs';
 import path from 'path';
 import { ICliConfig, ZodCliSchema } from './cli_schema';
 
+function fileExists(filePath: PathLike): boolean {
+  return existsSync(filePath);
+}
+
+function getConfig(configFile: string): ICliConfig {
+  return JSON.parse(readFileSync(configFile, 'utf-8'));
+}
+
 export const doPreChecks = async (
   jsonResultsPath: string,
   configFile: string,
@@ -54,27 +62,26 @@ export const doPreChecks = async (
     };
   }
 
-  if (config.sendUsingWebhook && config.sendUsingBot) {
+  // Count how many sending methods are configured
+  const sendingMethodsCount = [
+    config.sendUsingWebhook,
+    config.sendUsingBot,
+    config.sendUsingDiscordWebhook
+  ].filter(Boolean).length;
+
+  if (sendingMethodsCount === 0) {
     return {
       status: 'error',
       message:
-        'It is not possible to use both sendUsingWebhook and sendUsingBot, choose a single method',
+        'You must specify one of: sendUsingWebhook, sendUsingBot, or sendUsingDiscordWebhook in the config file',
     };
   }
 
-  if (config.sendUsingWebhook && config.showInThread) {
+  if (sendingMethodsCount > 1) {
     return {
       status: 'error',
       message:
-        'The showInThread feature is only supported when using sendUsingBot is configured',
-    };
-  }
-
-  if (!config.sendUsingWebhook && !config.sendUsingBot) {
-    return {
-      status: 'error',
-      message:
-        'You must specify either sendUsingWebhook or sendUsingBot in the config file',
+        'Only one sending method can be used at a time. Choose either sendUsingWebhook, sendUsingBot, or sendUsingDiscordWebhook',
     };
   }
 
@@ -82,6 +89,14 @@ export const doPreChecks = async (
     return {
       status: 'error',
       message: 'Missing the SLACK_BOT_USER_OAUTH_TOKEN env variable',
+    };
+  }
+
+  if (config.showInThread && !config.sendUsingBot) {
+    return {
+      status: 'error',
+      message:
+        'The showInThread feature is only supported when using sendUsingBot',
     };
   }
 
@@ -93,18 +108,4 @@ export const doPreChecks = async (
   };
 };
 
-function fileExists(filePath: string): boolean {
-  let absolutePath: PathLike;
-  try {
-    absolutePath = path.resolve(filePath);
-  } catch (error) {
-    return false;
-  }
-  return existsSync(absolutePath);
-}
-
-function getConfig(configPath: string): ICliConfig {
-  const config = readFileSync(path.resolve(path.resolve(configPath)), 'utf-8');
-  return JSON.parse(config);
-}
 export default doPreChecks;

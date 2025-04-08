@@ -369,7 +369,51 @@ You will encounter the following error if the environment variable is not define
   ...
 ```
 
-# ⚙️ Configuration (applicable for Option A and Option B)
+# Option D - send your results via a Discord webhook
+
+Enable incoming webhooks in your Discord server by following these steps:
+
+1. Open your Discord server settings
+2. Navigate to "Integrations" > "Webhooks"
+3. Click "New Webhook"
+4. Configure the webhook name and channel
+5. Copy the webhook URL
+
+Once you have your webhook URL, specify it in the config:
+
+```typescript
+  reporter: [
+    [
+      "./node_modules/playwright-slack-report/dist/src/SlackReporter.js",
+      {
+        sendUsingDiscordWebhook: {
+          webhookUrl: "https://discord.com/api/webhooks/...",
+          username: "Playwright Tests", // Optional: custom webhook name
+          avatarUrl: "https://playwright.dev/img/playwright-logo.svg", // Optional: custom avatar
+          embedColor: "#00FF00" // Optional: custom color for success messages (hex format)
+        },
+        sendResults: "always", // "always" , "on-failure", "off"
+        maxNumberOfFailures: 5 // Optional: limit the number of failures shown
+      },
+    ],
+    ["dot"], // other reporters
+  ],
+```
+
+### Discord Webhook Features:
+
+- Rich embeds with test results summary
+- Custom webhook name and avatar
+- Color-coded messages (green for success, red for failures)
+- Detailed failure information
+- Support for meta information display
+- Rate limiting handling with automatic retries
+
+### Note:
+
+You can only use one reporting method at a time (Slack webhook, Discord webhook, Slack bot, or CLI).
+
+# ⚙️ Configuration (applicable for Option A, Option B and Option D)
 
 An example advanced configuration is shown below:
 
