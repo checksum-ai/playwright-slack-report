@@ -14,6 +14,7 @@ import ResultsParser from './ResultsParser';
 import SlackClient from './SlackClient';
 import SlackWebhookClient from './SlackWebhookClient';
 import DiscordWebhookClient from './DiscordWebhookClient';
+import GoogleChatWebhookClient from './GoogleChatWebhookClient';
 
 class SlackReporter implements Reporter {
   private customLayout: Function | undefined;
@@ -49,6 +50,12 @@ class SlackReporter implements Reporter {
   private discordWebHookAvatarUrl: string | undefined;
 
   private discordWebHookEmbedColor: string | undefined;
+
+  private googleChatWebHookUrl: string | undefined;
+  
+  private googleChatWebHookThreadKey: string | undefined;
+  
+  private googleChatWebHookAvatarUrl: string | undefined;
 
   private disableUnfurl: boolean | undefined;
 
@@ -97,6 +104,9 @@ class SlackReporter implements Reporter {
       this.discordWebHookUsername = slackReporterConfig.discordWebHookUsername || undefined;
       this.discordWebHookAvatarUrl = slackReporterConfig.discordWebHookAvatarUrl || undefined;
       this.discordWebHookEmbedColor = slackReporterConfig.discordWebHookEmbedColor || undefined;
+      this.googleChatWebHookUrl = slackReporterConfig.googleChatWebHookUrl || undefined;
+      this.googleChatWebHookThreadKey = slackReporterConfig.googleChatWebHookThreadKey || undefined;
+      this.googleChatWebHookAvatarUrl = slackReporterConfig.googleChatWebHookAvatarUrl || undefined;
       this.disableUnfurl = slackReporterConfig.disableUnfurl || false;
       this.showInThread = slackReporterConfig.showInThread || false;
       this.slackLogLevel = slackReporterConfig.slackLogLevel || LogLevel.DEBUG;
@@ -142,7 +152,19 @@ class SlackReporter implements Reporter {
 
     const agent = this.proxy ? new HttpsProxyAgent(this.proxy) : undefined;
 
-    if (this.discordWebHookUrl) {
+    if (this.googleChatWebHookUrl) {
+      const googleChatWebhookClient = new GoogleChatWebhookClient({
+        webhookUrl: this.googleChatWebHookUrl,
+        threadKey: this.googleChatWebHookThreadKey,
+        avatarUrl: this.googleChatWebHookAvatarUrl,
+      });
+
+      const webhookResult = await googleChatWebhookClient.sendMessage({
+        maxNumberOfFailures: this.maxNumberOfFailuresToShow,
+        summaryResults: resultSummary,
+      });
+      console.log(JSON.stringify(webhookResult, null, 2));
+    } else if (this.discordWebHookUrl) {
       const discordWebhookClient = new DiscordWebhookClient({
         webhookUrl: this.discordWebHookUrl,
         username: this.discordWebHookUsername,
@@ -220,24 +242,25 @@ class SlackReporter implements Reporter {
     if (
       !this.slackWebHookUrl
       && !this.discordWebHookUrl
+      && !this.googleChatWebHookUrl
       && !this.slackOAuthToken
       && !process.env.SLACK_BOT_USER_OAUTH_TOKEN
     ) {
       return {
         okToProceed: false,
         message:
-          '❌ Neither slack/discord webhook url, slackOAuthToken nor process.env.SLACK_BOT_USER_OAUTH_TOKEN were found',
+          '❌ Neither slack/discord/google chat webhook url, slackOAuthToken nor process.env.SLACK_BOT_USER_OAUTH_TOKEN were found',
       };
     }
 
     if (
-      [this.slackWebHookUrl, this.discordWebHookUrl, this.slackOAuthToken, process.env.SLACK_BOT_USER_OAUTH_TOKEN]
+      [this.slackWebHookUrl, this.discordWebHookUrl, this.googleChatWebHookUrl, this.slackOAuthToken, process.env.SLACK_BOT_USER_OAUTH_TOKEN]
         .filter(Boolean).length > 1
     ) {
       return {
         okToProceed: false,
         message:
-          '❌ You can only enable a single option: either provide a slack webhook url, discord webhook url, slackOAuthToken or process.env.SLACK_BOT_USER_OAUTH_TOKEN',
+          '❌ You can only enable a single option: either provide a slack webhook url, discord webhook url, google chat webhook url, slackOAuthToken or process.env.SLACK_BOT_USER_OAUTH_TOKEN',
       };
     }
 

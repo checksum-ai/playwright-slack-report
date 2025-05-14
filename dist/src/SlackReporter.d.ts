@@ -17,6 +17,9 @@ declare class SlackReporter implements Reporter {
     private discordWebHookUsername;
     private discordWebHookAvatarUrl;
     private discordWebHookEmbedColor;
+    private googleChatWebHookUrl;
+    private googleChatWebHookThreadKey;
+    private googleChatWebHookAvatarUrl;
     private disableUnfurl;
     private proxy;
     private browsers;

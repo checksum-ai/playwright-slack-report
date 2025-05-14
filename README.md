@@ -4,17 +4,18 @@
 
 ![Main Logo](https://github.com/ryanrosello-og/playwright-slack-report/blob/main/assets/_logo.png?raw=true)
 
-Publish your Playwright test results to your favorite Slack channel(s).
+Publish your Playwright test results to your favorite Slack, Discord, or Google Chat channels.
 
 ![Gif](https://github.com/ryanrosello-og/playwright-slack-report/blob/main/assets/2022-08-15_20-22-59.png?raw=true)
 
 ## 🚀 Features
 
 - 💌 Send results your Playwright test results to one or more Slack channels
-- 🎚️ Leverage JSON results created by Playwright and seamlessly post them on Slack
-- 📊 Conditionally send results to Slack channels based on test results
+- 🎭 Support for Discord and Google Chat integrations
+- 🎚️ Leverage JSON results created by Playwright and seamlessly post them on messaging platforms
+- 📊 Conditionally send results to channels based on test results
 - 📄 Include additional meta information into your test summary e.g. Branch, BuildId etc
-- 🧑‍🎨 Define your own custom Slack message layout!
+- 🧑‍🎨 Define your own custom message layouts!
 
 # 📦 Installation
 
@@ -386,12 +387,10 @@ Once you have your webhook URL, specify it in the config:
     [
       "./node_modules/playwright-slack-report/dist/src/SlackReporter.js",
       {
-        sendUsingDiscordWebhook: {
-          webhookUrl: "https://discord.com/api/webhooks/...",
-          username: "Playwright Tests", // Optional: custom webhook name
-          avatarUrl: "https://playwright.dev/img/playwright-logo.svg", // Optional: custom avatar
-          embedColor: "#00FF00" // Optional: custom color for success messages (hex format)
-        },
+        discordWebHookUrl: "https://discord.com/api/webhooks/...",
+        discordWebHookUsername: "Playwright Tests", // Optional: custom webhook name
+        discordWebHookAvatarUrl: "https://playwright.dev/img/playwright-logo.svg", // Optional: custom avatar
+        discordWebHookEmbedColor: "#00FF00", // Optional: custom color for success messages (hex format)
         sendResults: "always", // "always" , "on-failure", "off"
         maxNumberOfFailures: 5 // Optional: limit the number of failures shown
       },
@@ -409,11 +408,51 @@ Once you have your webhook URL, specify it in the config:
 - Support for meta information display
 - Rate limiting handling with automatic retries
 
+# Option E - send your results via a Google Chat webhook
+
+Enable incoming webhooks in Google Chat by following these steps:
+
+1. In Google Chat, navigate to the space where you want to receive test reports
+2. Click the dropdown arrow next to the space name
+3. Select "Apps & integrations"
+4. Click "Add a webhook"
+5. Provide a name for the webhook (e.g., "Playwright Test Reporter")
+6. Optionally add an avatar URL
+7. Save the webhook configuration
+8. Copy the webhook URL provided
+
+Once you have your webhook URL, specify it in the config:
+
+```typescript
+  reporter: [
+    [
+      "./node_modules/playwright-slack-report/dist/src/SlackReporter.js",
+      {
+        googleChatWebHookUrl: "https://chat.googleapis.com/v1/spaces/YOUR_SPACE_ID/messages?key=YOUR_KEY&token=YOUR_TOKEN",
+        googleChatWebHookThreadKey: "playwright-test-results", // Optional: for message threading
+        googleChatWebHookAvatarUrl: "https://playwright.dev/img/playwright-logo.svg", // Optional: custom avatar
+        sendResults: "always", // "always" , "on-failure", "off"
+        maxNumberOfFailures: 5 // Optional: limit the number of failures shown
+      },
+    ],
+    ["dot"], // other reporters
+  ],
+```
+
+### Google Chat Webhook Features:
+
+- Rich card-based message format with test results summary
+- Support for message threading using threadKey
+- Custom avatar image
+- Detailed failure information with formatted text
+- Support for meta information display
+- Rate limiting handling with automatic retries
+
 ### Note:
 
-You can only use one reporting method at a time (Slack webhook, Discord webhook, Slack bot, or CLI).
+You can only use one reporting method at a time (Slack webhook, Discord webhook, Google Chat webhook, Slack bot, or CLI).
 
-# ⚙️ Configuration (applicable for Option A, Option B and Option D)
+# ⚙️ Configuration (applicable for Options A, B, D, and E)
 
 An example advanced configuration is shown below:
 
