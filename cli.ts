@@ -12,6 +12,7 @@ import { ICliConfig } from './src/cli/cli_schema';
 import { Meta, SummaryResults } from './src';
 import SlackWebhookClient from './src/SlackWebhookClient';
 import DiscordWebhookClient from './src/DiscordWebhookClient';
+import GoogleChatWebhookClient from './src/GoogleChatWebhookClient';
 
 const program = new Command();
 
@@ -47,6 +48,23 @@ program
     let summaryResults = resultSummary;
     const meta = replaceEnvVars(config.meta);
     summaryResults = { ...resultSummary, meta };
+
+    if (config.sendUsingGoogleChatWebhook) {
+      const googleChatWebhookClient = new GoogleChatWebhookClient({
+        webhookUrl: config.sendUsingGoogleChatWebhook.webhookUrl,
+        threadKey: config.sendUsingGoogleChatWebhook.threadKey,
+        avatarUrl: config.sendUsingGoogleChatWebhook.avatarUrl,
+      });
+
+      const webhookResult = await googleChatWebhookClient.sendMessage({
+        maxNumberOfFailures: config.maxNumberOfFailures,
+        summaryResults,
+      });
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify(webhookResult, null, 2));
+      console.log('✅ Results sent to Google Chat');
+      process.exit(0);
+    }
 
     if (config.sendUsingDiscordWebhook) {
       const discordWebhookClient = new DiscordWebhookClient({

@@ -32,6 +32,19 @@ export declare const ZodCliSchema: z.ZodObject<{
         avatarUrl?: string;
         embedColor?: string;
     }>>;
+    sendUsingGoogleChatWebhook: z.ZodOptional<z.ZodObject<{
+        webhookUrl: z.ZodString;
+        threadKey: z.ZodOptional<z.ZodString>;
+        avatarUrl: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        webhookUrl?: string;
+        avatarUrl?: string;
+        threadKey?: string;
+    }, {
+        webhookUrl?: string;
+        avatarUrl?: string;
+        threadKey?: string;
+    }>>;
     customLayout: z.ZodOptional<z.ZodObject<{
         functionName: z.ZodString;
         source: z.ZodString;
@@ -88,6 +101,11 @@ export declare const ZodCliSchema: z.ZodObject<{
         avatarUrl?: string;
         embedColor?: string;
     };
+    sendUsingGoogleChatWebhook?: {
+        webhookUrl?: string;
+        avatarUrl?: string;
+        threadKey?: string;
+    };
     customLayout?: {
         source?: string;
         functionName?: string;
@@ -119,6 +137,11 @@ export declare const ZodCliSchema: z.ZodObject<{
         avatarUrl?: string;
         embedColor?: string;
     };
+    sendUsingGoogleChatWebhook?: {
+        webhookUrl?: string;
+        avatarUrl?: string;
+        threadKey?: string;
+    };
     customLayout?: {
         source?: string;
         functionName?: string;
@@ -143,6 +166,11 @@ export interface ICliConfig {
         username?: string;
         avatarUrl?: string;
         embedColor?: string;
+    };
+    sendUsingGoogleChatWebhook?: {
+        webhookUrl: string;
+        threadKey?: string;
+        avatarUrl?: string;
     };
     slackLogLevel: LogLevel;
     customLayout?: {

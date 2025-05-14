@@ -24,6 +24,13 @@ exports.ZodCliSchema = zod_1.z.object({
         embedColor: zod_1.z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
     })
         .optional(),
+    sendUsingGoogleChatWebhook: zod_1.z
+        .object({
+        webhookUrl: zod_1.z.string().url(),
+        threadKey: zod_1.z.string().optional(),
+        avatarUrl: zod_1.z.string().url().optional(),
+    })
+        .optional(),
     customLayout: zod_1.z
         .object({
         functionName: zod_1.z.string(),

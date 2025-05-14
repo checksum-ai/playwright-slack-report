@@ -54,18 +54,19 @@ const doPreChecks = async (jsonResultsPath, configFile) => {
     const sendingMethodsCount = [
         config.sendUsingWebhook,
         config.sendUsingBot,
-        config.sendUsingDiscordWebhook
+        config.sendUsingDiscordWebhook,
+        config.sendUsingGoogleChatWebhook
     ].filter(Boolean).length;
     if (sendingMethodsCount === 0) {
         return {
             status: 'error',
-            message: 'You must specify one of: sendUsingWebhook, sendUsingBot, or sendUsingDiscordWebhook in the config file',
+            message: 'You must specify one of: sendUsingWebhook, sendUsingBot, sendUsingDiscordWebhook, or sendUsingGoogleChatWebhook in the config file',
         };
     }
     if (sendingMethodsCount > 1) {
         return {
             status: 'error',
-            message: 'Only one sending method can be used at a time. Choose either sendUsingWebhook, sendUsingBot, or sendUsingDiscordWebhook',
+            message: 'Only one sending method can be used at a time. Choose either sendUsingWebhook, sendUsingBot, sendUsingDiscordWebhook, or sendUsingGoogleChatWebhook',
         };
     }
     if (config.sendUsingBot && !process.env.SLACK_BOT_USER_OAUTH_TOKEN) {

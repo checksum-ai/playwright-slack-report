@@ -38,6 +38,7 @@ const SlackClient_1 = __importDefault(require("./src/SlackClient"));
 const cli_pre_checks_1 = __importDefault(require("./src/cli/cli_pre_checks"));
 const SlackWebhookClient_1 = __importDefault(require("./src/SlackWebhookClient"));
 const DiscordWebhookClient_1 = __importDefault(require("./src/DiscordWebhookClient"));
+const GoogleChatWebhookClient_1 = __importDefault(require("./src/GoogleChatWebhookClient"));
 const program = new commander_1.Command();
 program
     .name('playwright-slack-report - cli')
@@ -58,6 +59,21 @@ program
     let summaryResults = resultSummary;
     const meta = replaceEnvVars(config.meta);
     summaryResults = { ...resultSummary, meta };
+    if (config.sendUsingGoogleChatWebhook) {
+        const googleChatWebhookClient = new GoogleChatWebhookClient_1.default({
+            webhookUrl: config.sendUsingGoogleChatWebhook.webhookUrl,
+            threadKey: config.sendUsingGoogleChatWebhook.threadKey,
+            avatarUrl: config.sendUsingGoogleChatWebhook.avatarUrl,
+        });
+        const webhookResult = await googleChatWebhookClient.sendMessage({
+            maxNumberOfFailures: config.maxNumberOfFailures,
+            summaryResults,
+        });
+        // eslint-disable-next-line no-console
+        console.log(JSON.stringify(webhookResult, null, 2));
+        console.log('✅ Results sent to Google Chat');
+        process.exit(0);
+    }
     if (config.sendUsingDiscordWebhook) {
         const discordWebhookClient = new DiscordWebhookClient_1.default({
             webhookUrl: config.sendUsingDiscordWebhook.webhookUrl,

@@ -22,6 +22,13 @@ export const ZodCliSchema = z.object({
       embedColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
     })
     .optional(),
+  sendUsingGoogleChatWebhook: z
+    .object({
+      webhookUrl: z.string().url(),
+      threadKey: z.string().optional(),
+      avatarUrl: z.string().url().optional(),
+    })
+    .optional(),
   customLayout: z
     .object({
       functionName: z.string(),
@@ -55,6 +62,11 @@ export interface ICliConfig {
     username?: string;
     avatarUrl?: string;
     embedColor?: string;
+  };
+  sendUsingGoogleChatWebhook?: {
+    webhookUrl: string;
+    threadKey?: string;
+    avatarUrl?: string;
   };
   slackLogLevel: LogLevel;
   customLayout?: {
