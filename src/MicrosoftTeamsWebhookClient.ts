@@ -6,15 +6,17 @@ interface MicrosoftTeamsWebhookConfig {
   themeColor?: string;
 }
 
-interface MicrosoftTeamsAdaptiveCardPayload {
-  type: 'message';
-  attachments: Array<{
-    contentType: 'application/vnd.microsoft.card.adaptive';
-    content: {
-      type: 'AdaptiveCard';
-      version: '1.3';
-      body: Array<any>;
-    };
+interface MicrosoftTeamsMessagePayload {
+  text: string;
+  themeColor?: string;
+  sections?: Array<{
+    activityTitle?: string;
+    activitySubtitle?: string;
+    facts?: Array<{
+      name: string;
+      value: string;
+    }>;
+    markdown?: boolean;
   }>;
 }
 
@@ -62,7 +64,7 @@ export default class MicrosoftTeamsWebhookClient {
   }
 
   private async sendWebhookRequest(
-    payload: MicrosoftTeamsAdaptiveCardPayload,
+    payload: MicrosoftTeamsMessagePayload,
     retryCount = 0,
   ): Promise<Response> {
     try {
@@ -105,117 +107,59 @@ export default class MicrosoftTeamsWebhookClient {
   private generatePayload(
     summaryResults: SummaryResults,
     maxNumberOfFailures: number,
-  ): MicrosoftTeamsAdaptiveCardPayload {
+  ): MicrosoftTeamsMessagePayload {
     const { passed = 0, failed = 0, skipped = 0, flaky = 0 } = summaryResults;
     const totalTests = passed + failed + skipped + (flaky || 0);
 
     const statusEmoji = failed > 0 ? '❌' : '✅';
-    const statusColor = failed > 0 ? 'attention' : 'good';
+    const title = this.webhookConfig.title || '🎭 Playwright Test Results';
 
-    const cardBody: any[] = [
+    // Build the main facts array
+    const facts = [
+      { name: 'Total Tests', value: totalTests.toString() },
+      { name: '✅ Passed', value: passed.toString() },
+      { name: '❌ Failed', value: failed.toString() },
+      { name: '⏩ Skipped', value: skipped.toString() },
+      ...(flaky ? [{ name: '🔄 Flaky', value: flaky.toString() }] : []),
+    ];
+
+    // Add meta information
+    if (summaryResults.meta && summaryResults.meta.length > 0) {
+      summaryResults.meta.forEach((m) => {
+        facts.push({ name: m.key, value: m.value });
+      });
+    }
+
+    const sections = [
       {
-        type: 'TextBlock',
-        text: this.webhookConfig.title || '🎭 Playwright Test Results',
-        size: 'Large',
-        weight: 'Bolder',
-      },
-      {
-        type: 'TextBlock',
-        text: `${statusEmoji} Test Run Complete`,
-        size: 'Medium',
-        color: statusColor,
-        wrap: true,
-      },
-      {
-        type: 'FactSet',
-        facts: [
-          {
-            title: 'Total Tests:',
-            value: totalTests.toString(),
-          },
-          {
-            title: '✅ Passed:',
-            value: passed.toString(),
-          },
-          {
-            title: '❌ Failed:',
-            value: failed.toString(),
-          },
-          {
-            title: '⏩ Skipped:',
-            value: skipped.toString(),
-          },
-          ...(flaky ? [{ title: '🔄 Flaky:', value: flaky.toString() }] : []),
-        ],
+        activityTitle: title,
+        activitySubtitle: `${statusEmoji} Test Run Complete`,
+        facts,
+        markdown: true,
       },
     ];
 
-    // Add meta information if available
-    if (summaryResults.meta && summaryResults.meta.length > 0) {
-      cardBody.push({
-        type: 'TextBlock',
-        text: '**Meta Information**',
-        weight: 'Bolder',
-        wrap: true,
-      });
-      cardBody.push({
-        type: 'FactSet',
-        facts: summaryResults.meta.map((m) => ({
-          title: `${m.key}:`,
-          value: m.value,
-        })),
-      });
-    }
-
-    // Add failures if any
+    // Add failures section if any
     if (summaryResults.failures && summaryResults.failures.length > 0) {
-      cardBody.push({
-        type: 'TextBlock',
-        text: '**Test Failures**',
-        weight: 'Bolder',
-        color: 'attention',
-        wrap: true,
-      });
-
-      summaryResults.failures
+      const failuresText = summaryResults.failures
         .slice(0, maxNumberOfFailures)
-        .forEach((failure) => {
-          cardBody.push({
-            type: 'TextBlock',
-            text: `**${failure.suite} > ${failure.test}**`,
-            weight: 'Bolder',
-            wrap: true,
-          });
-          cardBody.push({
-            type: 'TextBlock',
-            text: failure.failureReason.substring(0, 1000),
-            wrap: true,
-          });
-        });
+        .map((failure) => `**${failure.suite} > ${failure.test}**\n${failure.failureReason.substring(0, 500)}`)
+        .join('\n\n');
 
-      // Add footer for limited failures display
-      if (summaryResults.failures.length > maxNumberOfFailures) {
-        cardBody.push({
-          type: 'TextBlock',
-          text: `Showing ${maxNumberOfFailures} of ${summaryResults.failures.length} failures`,
-          size: 'Small',
-          wrap: true,
-        });
-      }
+      sections.push({
+        activityTitle: '🚨 Test Failures',
+        activitySubtitle: summaryResults.failures.length > maxNumberOfFailures 
+          ? `Showing ${maxNumberOfFailures} of ${summaryResults.failures.length} failures`
+          : undefined,
+        facts: [{ name: 'Details', value: failuresText }],
+        markdown: true,
+      });
     }
 
-    const payload: MicrosoftTeamsAdaptiveCardPayload = {
-      type: 'message',
-      attachments: [
-        {
-          contentType: 'application/vnd.microsoft.card.adaptive',
-          content: {
-            type: 'AdaptiveCard',
-            version: '1.3',
-            body: cardBody,
-          },
-        },
-      ],
+    const payload: MicrosoftTeamsMessagePayload = {
+      text: `${title}: ${statusEmoji} ${passed} passed, ${failed} failed, ${skipped} skipped`,
+      themeColor: this.webhookConfig.themeColor || (failed > 0 ? '#ff0000' : '#00ff00'),
+      sections,
     };
 
     return payload;
