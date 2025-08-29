@@ -13,6 +13,7 @@ import { Meta, SummaryResults } from './src';
 import SlackWebhookClient from './src/SlackWebhookClient';
 import DiscordWebhookClient from './src/DiscordWebhookClient';
 import GoogleChatWebhookClient from './src/GoogleChatWebhookClient';
+import MicrosoftTeamsWebhookClient from './src/MicrosoftTeamsWebhookClient';
 
 const program = new Command();
 
@@ -48,6 +49,23 @@ program
     let summaryResults = resultSummary;
     const meta = replaceEnvVars(config.meta);
     summaryResults = { ...resultSummary, meta };
+
+    if (config.sendUsingMicrosoftTeamsWebhook) {
+      const microsoftTeamsWebhookClient = new MicrosoftTeamsWebhookClient({
+        webhookUrl: config.sendUsingMicrosoftTeamsWebhook.webhookUrl,
+        title: config.sendUsingMicrosoftTeamsWebhook.title,
+        themeColor: config.sendUsingMicrosoftTeamsWebhook.themeColor,
+      });
+
+      const webhookResult = await microsoftTeamsWebhookClient.sendMessage({
+        maxNumberOfFailures: config.maxNumberOfFailures,
+        summaryResults,
+      });
+      // eslint-disable-next-line no-console
+      console.log(JSON.stringify(webhookResult, null, 2));
+      console.log('✅ Results sent to Microsoft Teams');
+      process.exit(0);
+    }
 
     if (config.sendUsingGoogleChatWebhook) {
       const googleChatWebhookClient = new GoogleChatWebhookClient({
@@ -131,6 +149,10 @@ program
       console.log('✅ Results sent to Slack');
       process.exit(0);
     }
+
+    // If no configuration matched, show an error
+    console.error('❌ No valid configuration found. Please configure one of: sendUsingBot, sendUsingWebhook, sendUsingDiscordWebhook, sendUsingGoogleChatWebhook, or sendUsingMicrosoftTeamsWebhook');
+    process.exit(1);
   });
 
 program.parse();

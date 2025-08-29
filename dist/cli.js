@@ -39,6 +39,7 @@ const cli_pre_checks_1 = __importDefault(require("./src/cli/cli_pre_checks"));
 const SlackWebhookClient_1 = __importDefault(require("./src/SlackWebhookClient"));
 const DiscordWebhookClient_1 = __importDefault(require("./src/DiscordWebhookClient"));
 const GoogleChatWebhookClient_1 = __importDefault(require("./src/GoogleChatWebhookClient"));
+const MicrosoftTeamsWebhookClient_1 = __importDefault(require("./src/MicrosoftTeamsWebhookClient"));
 const program = new commander_1.Command();
 program
     .name('playwright-slack-report - cli')
@@ -59,6 +60,21 @@ program
     let summaryResults = resultSummary;
     const meta = replaceEnvVars(config.meta);
     summaryResults = { ...resultSummary, meta };
+    if (config.sendUsingMicrosoftTeamsWebhook) {
+        const microsoftTeamsWebhookClient = new MicrosoftTeamsWebhookClient_1.default({
+            webhookUrl: config.sendUsingMicrosoftTeamsWebhook.webhookUrl,
+            title: config.sendUsingMicrosoftTeamsWebhook.title,
+            themeColor: config.sendUsingMicrosoftTeamsWebhook.themeColor,
+        });
+        const webhookResult = await microsoftTeamsWebhookClient.sendMessage({
+            maxNumberOfFailures: config.maxNumberOfFailures,
+            summaryResults,
+        });
+        // eslint-disable-next-line no-console
+        console.log(JSON.stringify(webhookResult, null, 2));
+        console.log('✅ Results sent to Microsoft Teams');
+        process.exit(0);
+    }
     if (config.sendUsingGoogleChatWebhook) {
         const googleChatWebhookClient = new GoogleChatWebhookClient_1.default({
             webhookUrl: config.sendUsingGoogleChatWebhook.webhookUrl,
@@ -129,6 +145,9 @@ program
         console.log('✅ Results sent to Slack');
         process.exit(0);
     }
+    // If no configuration matched, show an error
+    console.error('❌ No valid configuration found. Please configure one of: sendUsingBot, sendUsingWebhook, sendUsingDiscordWebhook, sendUsingGoogleChatWebhook, or sendUsingMicrosoftTeamsWebhook');
+    process.exit(1);
 });
 program.parse();
 async function sendResultsUsingBot({ resultSummary, slackClient, config, }) {
