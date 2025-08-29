@@ -33,6 +33,7 @@ class MicrosoftTeamsWebhookClient {
     }
     async sendWebhookRequest(payload, retryCount = 0) {
         try {
+            console.log('Sending Microsoft Teams payload:', JSON.stringify(payload, null, 2));
             const response = await fetch(this.webhookConfig.webhookUrl, {
                 method: 'POST',
                 headers: {
@@ -40,6 +41,9 @@ class MicrosoftTeamsWebhookClient {
                 },
                 body: JSON.stringify(payload),
             });
+            console.log('Microsoft Teams response status:', response.status);
+            const responseText = await response.text();
+            console.log('Microsoft Teams response body:', responseText);
             if (!response.ok) {
                 if (response.status === 429 &&
                     retryCount < MicrosoftTeamsWebhookClient.MAX_RETRIES) {
