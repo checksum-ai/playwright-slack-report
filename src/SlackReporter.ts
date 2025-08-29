@@ -15,6 +15,7 @@ import SlackClient from './SlackClient';
 import SlackWebhookClient from './SlackWebhookClient';
 import DiscordWebhookClient from './DiscordWebhookClient';
 import GoogleChatWebhookClient from './GoogleChatWebhookClient';
+import MicrosoftTeamsWebhookClient from './MicrosoftTeamsWebhookClient';
 
 class SlackReporter implements Reporter {
   private customLayout: Function | undefined;
@@ -56,6 +57,12 @@ class SlackReporter implements Reporter {
   private googleChatWebHookThreadKey: string | undefined;
   
   private googleChatWebHookAvatarUrl: string | undefined;
+
+  private microsoftTeamsWebHookUrl: string | undefined;
+  
+  private microsoftTeamsWebHookTitle: string | undefined;
+  
+  private microsoftTeamsWebHookThemeColor: string | undefined;
 
   private disableUnfurl: boolean | undefined;
 
@@ -107,6 +114,9 @@ class SlackReporter implements Reporter {
       this.googleChatWebHookUrl = slackReporterConfig.googleChatWebHookUrl || undefined;
       this.googleChatWebHookThreadKey = slackReporterConfig.googleChatWebHookThreadKey || undefined;
       this.googleChatWebHookAvatarUrl = slackReporterConfig.googleChatWebHookAvatarUrl || undefined;
+      this.microsoftTeamsWebHookUrl = slackReporterConfig.microsoftTeamsWebHookUrl || undefined;
+      this.microsoftTeamsWebHookTitle = slackReporterConfig.microsoftTeamsWebHookTitle || undefined;
+      this.microsoftTeamsWebHookThemeColor = slackReporterConfig.microsoftTeamsWebHookThemeColor || undefined;
       this.disableUnfurl = slackReporterConfig.disableUnfurl || false;
       this.showInThread = slackReporterConfig.showInThread || false;
       this.slackLogLevel = slackReporterConfig.slackLogLevel || LogLevel.DEBUG;
@@ -152,7 +162,19 @@ class SlackReporter implements Reporter {
 
     const agent = this.proxy ? new HttpsProxyAgent(this.proxy) : undefined;
 
-    if (this.googleChatWebHookUrl) {
+    if (this.microsoftTeamsWebHookUrl) {
+      const microsoftTeamsWebhookClient = new MicrosoftTeamsWebhookClient({
+        webhookUrl: this.microsoftTeamsWebHookUrl,
+        title: this.microsoftTeamsWebHookTitle,
+        themeColor: this.microsoftTeamsWebHookThemeColor,
+      });
+
+      const webhookResult = await microsoftTeamsWebhookClient.sendMessage({
+        maxNumberOfFailures: this.maxNumberOfFailuresToShow,
+        summaryResults: resultSummary,
+      });
+      console.log(JSON.stringify(webhookResult, null, 2));
+    } else if (this.googleChatWebHookUrl) {
       const googleChatWebhookClient = new GoogleChatWebhookClient({
         webhookUrl: this.googleChatWebHookUrl,
         threadKey: this.googleChatWebHookThreadKey,
@@ -243,24 +265,25 @@ class SlackReporter implements Reporter {
       !this.slackWebHookUrl
       && !this.discordWebHookUrl
       && !this.googleChatWebHookUrl
+      && !this.microsoftTeamsWebHookUrl
       && !this.slackOAuthToken
       && !process.env.SLACK_BOT_USER_OAUTH_TOKEN
     ) {
       return {
         okToProceed: false,
         message:
-          '❌ Neither slack/discord/google chat webhook url, slackOAuthToken nor process.env.SLACK_BOT_USER_OAUTH_TOKEN were found',
+          '❌ Neither slack/discord/google chat/microsoft teams webhook url, slackOAuthToken nor process.env.SLACK_BOT_USER_OAUTH_TOKEN were found',
       };
     }
 
     if (
-      [this.slackWebHookUrl, this.discordWebHookUrl, this.googleChatWebHookUrl, this.slackOAuthToken, process.env.SLACK_BOT_USER_OAUTH_TOKEN]
+      [this.slackWebHookUrl, this.discordWebHookUrl, this.googleChatWebHookUrl, this.microsoftTeamsWebHookUrl, this.slackOAuthToken, process.env.SLACK_BOT_USER_OAUTH_TOKEN]
         .filter(Boolean).length > 1
     ) {
       return {
         okToProceed: false,
         message:
-          '❌ You can only enable a single option: either provide a slack webhook url, discord webhook url, google chat webhook url, slackOAuthToken or process.env.SLACK_BOT_USER_OAUTH_TOKEN',
+          '❌ You can only enable a single option: either provide a slack webhook url, discord webhook url, google chat webhook url, microsoft teams webhook url, slackOAuthToken or process.env.SLACK_BOT_USER_OAUTH_TOKEN',
       };
     }
 

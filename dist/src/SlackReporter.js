@@ -11,6 +11,7 @@ const SlackClient_1 = __importDefault(require("./SlackClient"));
 const SlackWebhookClient_1 = __importDefault(require("./SlackWebhookClient"));
 const DiscordWebhookClient_1 = __importDefault(require("./DiscordWebhookClient"));
 const GoogleChatWebhookClient_1 = __importDefault(require("./GoogleChatWebhookClient"));
+const MicrosoftTeamsWebhookClient_1 = __importDefault(require("./MicrosoftTeamsWebhookClient"));
 class SlackReporter {
     customLayout;
     customLayoutAsync;
@@ -32,6 +33,9 @@ class SlackReporter {
     googleChatWebHookUrl;
     googleChatWebHookThreadKey;
     googleChatWebHookAvatarUrl;
+    microsoftTeamsWebHookUrl;
+    microsoftTeamsWebHookTitle;
+    microsoftTeamsWebHookThemeColor;
     disableUnfurl;
     proxy;
     browsers = [];
@@ -77,6 +81,9 @@ class SlackReporter {
             this.googleChatWebHookUrl = slackReporterConfig.googleChatWebHookUrl || undefined;
             this.googleChatWebHookThreadKey = slackReporterConfig.googleChatWebHookThreadKey || undefined;
             this.googleChatWebHookAvatarUrl = slackReporterConfig.googleChatWebHookAvatarUrl || undefined;
+            this.microsoftTeamsWebHookUrl = slackReporterConfig.microsoftTeamsWebHookUrl || undefined;
+            this.microsoftTeamsWebHookTitle = slackReporterConfig.microsoftTeamsWebHookTitle || undefined;
+            this.microsoftTeamsWebHookThemeColor = slackReporterConfig.microsoftTeamsWebHookThemeColor || undefined;
             this.disableUnfurl = slackReporterConfig.disableUnfurl || false;
             this.showInThread = slackReporterConfig.showInThread || false;
             this.slackLogLevel = slackReporterConfig.slackLogLevel || web_api_1.LogLevel.DEBUG;
@@ -111,7 +118,19 @@ class SlackReporter {
             return;
         }
         const agent = this.proxy ? new https_proxy_agent_1.HttpsProxyAgent(this.proxy) : undefined;
-        if (this.googleChatWebHookUrl) {
+        if (this.microsoftTeamsWebHookUrl) {
+            const microsoftTeamsWebhookClient = new MicrosoftTeamsWebhookClient_1.default({
+                webhookUrl: this.microsoftTeamsWebHookUrl,
+                title: this.microsoftTeamsWebHookTitle,
+                themeColor: this.microsoftTeamsWebHookThemeColor,
+            });
+            const webhookResult = await microsoftTeamsWebhookClient.sendMessage({
+                maxNumberOfFailures: this.maxNumberOfFailuresToShow,
+                summaryResults: resultSummary,
+            });
+            console.log(JSON.stringify(webhookResult, null, 2));
+        }
+        else if (this.googleChatWebHookUrl) {
             const googleChatWebhookClient = new GoogleChatWebhookClient_1.default({
                 webhookUrl: this.googleChatWebHookUrl,
                 threadKey: this.googleChatWebHookThreadKey,
@@ -193,18 +212,19 @@ class SlackReporter {
         if (!this.slackWebHookUrl
             && !this.discordWebHookUrl
             && !this.googleChatWebHookUrl
+            && !this.microsoftTeamsWebHookUrl
             && !this.slackOAuthToken
             && !process.env.SLACK_BOT_USER_OAUTH_TOKEN) {
             return {
                 okToProceed: false,
-                message: '❌ Neither slack/discord/google chat webhook url, slackOAuthToken nor process.env.SLACK_BOT_USER_OAUTH_TOKEN were found',
+                message: '❌ Neither slack/discord/google chat/microsoft teams webhook url, slackOAuthToken nor process.env.SLACK_BOT_USER_OAUTH_TOKEN were found',
             };
         }
-        if ([this.slackWebHookUrl, this.discordWebHookUrl, this.googleChatWebHookUrl, this.slackOAuthToken, process.env.SLACK_BOT_USER_OAUTH_TOKEN]
+        if ([this.slackWebHookUrl, this.discordWebHookUrl, this.googleChatWebHookUrl, this.microsoftTeamsWebHookUrl, this.slackOAuthToken, process.env.SLACK_BOT_USER_OAUTH_TOKEN]
             .filter(Boolean).length > 1) {
             return {
                 okToProceed: false,
-                message: '❌ You can only enable a single option: either provide a slack webhook url, discord webhook url, google chat webhook url, slackOAuthToken or process.env.SLACK_BOT_USER_OAUTH_TOKEN',
+                message: '❌ You can only enable a single option: either provide a slack webhook url, discord webhook url, google chat webhook url, microsoft teams webhook url, slackOAuthToken or process.env.SLACK_BOT_USER_OAUTH_TOKEN',
             };
         }
         if (this.slackWebHookUrl && this.showInThread) {

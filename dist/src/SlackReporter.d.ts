@@ -20,6 +20,9 @@ declare class SlackReporter implements Reporter {
     private googleChatWebHookUrl;
     private googleChatWebHookThreadKey;
     private googleChatWebHookAvatarUrl;
+    private microsoftTeamsWebHookUrl;
+    private microsoftTeamsWebHookTitle;
+    private microsoftTeamsWebHookThemeColor;
     private disableUnfurl;
     private proxy;
     private browsers;

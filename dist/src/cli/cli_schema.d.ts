@@ -45,6 +45,19 @@ export declare const ZodCliSchema: z.ZodObject<{
         avatarUrl?: string;
         threadKey?: string;
     }>>;
+    sendUsingMicrosoftTeamsWebhook: z.ZodOptional<z.ZodObject<{
+        webhookUrl: z.ZodString;
+        title: z.ZodOptional<z.ZodString>;
+        themeColor: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        title?: string;
+        webhookUrl?: string;
+        themeColor?: string;
+    }, {
+        title?: string;
+        webhookUrl?: string;
+        themeColor?: string;
+    }>>;
     customLayout: z.ZodOptional<z.ZodObject<{
         functionName: z.ZodString;
         source: z.ZodString;
@@ -106,6 +119,11 @@ export declare const ZodCliSchema: z.ZodObject<{
         avatarUrl?: string;
         threadKey?: string;
     };
+    sendUsingMicrosoftTeamsWebhook?: {
+        title?: string;
+        webhookUrl?: string;
+        themeColor?: string;
+    };
     customLayout?: {
         source?: string;
         functionName?: string;
@@ -142,6 +160,11 @@ export declare const ZodCliSchema: z.ZodObject<{
         avatarUrl?: string;
         threadKey?: string;
     };
+    sendUsingMicrosoftTeamsWebhook?: {
+        title?: string;
+        webhookUrl?: string;
+        themeColor?: string;
+    };
     customLayout?: {
         source?: string;
         functionName?: string;
@@ -171,6 +194,11 @@ export interface ICliConfig {
         webhookUrl: string;
         threadKey?: string;
         avatarUrl?: string;
+    };
+    sendUsingMicrosoftTeamsWebhook?: {
+        webhookUrl: string;
+        title?: string;
+        themeColor?: string;
     };
     slackLogLevel: LogLevel;
     customLayout?: {

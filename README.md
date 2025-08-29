@@ -4,14 +4,14 @@
 
 ![Main Logo](https://github.com/ryanrosello-og/playwright-slack-report/blob/main/assets/_logo.png?raw=true)
 
-Publish your Playwright test results to your favorite Slack, Discord, or Google Chat channels.
+Publish your Playwright test results to your favorite Slack, Discord, Google Chat, or Microsoft Teams channels.
 
 ![Gif](https://github.com/ryanrosello-og/playwright-slack-report/blob/main/assets/2022-08-15_20-22-59.png?raw=true)
 
 ## 🚀 Features
 
 - 💌 Send results your Playwright test results to one or more Slack channels
-- 🎭 Support for Discord and Google Chat integrations
+- 🎭 Support for Discord, Google Chat, and Microsoft Teams integrations
 - 🎚️ Leverage JSON results created by Playwright and seamlessly post them on messaging platforms
 - 📊 Conditionally send results to channels based on test results
 - 📄 Include additional meta information into your test summary e.g. Branch, BuildId etc
@@ -450,9 +450,54 @@ Once you have your webhook URL, specify it in the config:
 
 ### Note:
 
-You can only use one reporting method at a time (Slack webhook, Discord webhook, Google Chat webhook, Slack bot, or CLI).
+You can only use one reporting method at a time (Slack webhook, Discord webhook, Google Chat webhook, Microsoft Teams webhook, Slack bot, or CLI).
 
-# ⚙️ Configuration (applicable for Options A, B, D, and E)
+# Option F - send your results via a Microsoft Teams webhook
+
+Enable incoming webhooks in Microsoft Teams by following these steps:
+
+1. In Microsoft Teams, navigate to the channel where you want to receive test reports
+2. Click the three dots (More options) next to the channel name
+3. Select "Connectors"
+4. Find "Incoming Webhook" and click "Configure"
+5. Provide a name for the webhook (e.g., "Playwright Test Reporter")
+6. Optionally upload an image for the webhook
+7. Click "Create" to generate the webhook URL
+8. Copy the webhook URL provided
+
+Once you have your webhook URL, specify it in the config:
+
+```typescript
+  reporter: [
+    [
+      "./node_modules/playwright-slack-report/dist/src/SlackReporter.js",
+      {
+        microsoftTeamsWebHookUrl: "https://outlook.office.com/webhook/YOUR_WEBHOOK_URL",
+        microsoftTeamsWebHookTitle: "🎭 Playwright Test Results", // Optional: custom title
+        microsoftTeamsWebHookThemeColor: "#0078D4", // Optional: custom theme color
+        sendResults: "always", // "always" , "on-failure", "off"
+        maxNumberOfFailures: 5 // Optional: limit the number of failures shown
+      },
+    ],
+    ["dot"], // other reporters
+  ],
+```
+
+### Microsoft Teams Webhook Features:
+
+- Rich Adaptive Card format with professional styling
+- Test results summary with clear pass/fail indicators
+- Custom title and theme color support
+- Detailed failure information with formatted text blocks
+- Support for meta information display in structured format
+- Rate limiting handling with automatic retries
+- Follows Microsoft Teams design guidelines for optimal readability
+
+### Note:
+
+You can only use one reporting method at a time (Slack webhook, Discord webhook, Google Chat webhook, Microsoft Teams webhook, Slack bot, or CLI).
+
+# ⚙️ Configuration (applicable for Options A, B, D, E, and F)
 
 An example advanced configuration is shown below:
 

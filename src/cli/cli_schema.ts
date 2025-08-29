@@ -29,6 +29,13 @@ export const ZodCliSchema = z.object({
       avatarUrl: z.string().url().optional(),
     })
     .optional(),
+  sendUsingMicrosoftTeamsWebhook: z
+    .object({
+      webhookUrl: z.string().url(),
+      title: z.string().optional(),
+      themeColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+    })
+    .optional(),
   customLayout: z
     .object({
       functionName: z.string(),
@@ -67,6 +74,11 @@ export interface ICliConfig {
     webhookUrl: string;
     threadKey?: string;
     avatarUrl?: string;
+  };
+  sendUsingMicrosoftTeamsWebhook?: {
+    webhookUrl: string;
+    title?: string;
+    themeColor?: string;
   };
   slackLogLevel: LogLevel;
   customLayout?: {

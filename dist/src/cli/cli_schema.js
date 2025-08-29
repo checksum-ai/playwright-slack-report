@@ -31,6 +31,13 @@ exports.ZodCliSchema = zod_1.z.object({
         avatarUrl: zod_1.z.string().url().optional(),
     })
         .optional(),
+    sendUsingMicrosoftTeamsWebhook: zod_1.z
+        .object({
+        webhookUrl: zod_1.z.string().url(),
+        title: zod_1.z.string().optional(),
+        themeColor: zod_1.z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+    })
+        .optional(),
     customLayout: zod_1.z
         .object({
         functionName: zod_1.z.string(),

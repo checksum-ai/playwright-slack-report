@@ -67,14 +67,15 @@ export const doPreChecks = async (
     config.sendUsingWebhook,
     config.sendUsingBot,
     config.sendUsingDiscordWebhook,
-    config.sendUsingGoogleChatWebhook
+    config.sendUsingGoogleChatWebhook,
+    config.sendUsingMicrosoftTeamsWebhook
   ].filter(Boolean).length;
 
   if (sendingMethodsCount === 0) {
     return {
       status: 'error',
       message:
-        'You must specify one of: sendUsingWebhook, sendUsingBot, sendUsingDiscordWebhook, or sendUsingGoogleChatWebhook in the config file',
+        'You must specify one of: sendUsingWebhook, sendUsingBot, sendUsingDiscordWebhook, sendUsingGoogleChatWebhook, or sendUsingMicrosoftTeamsWebhook in the config file',
     };
   }
 
@@ -82,7 +83,7 @@ export const doPreChecks = async (
     return {
       status: 'error',
       message:
-        'Only one sending method can be used at a time. Choose either sendUsingWebhook, sendUsingBot, sendUsingDiscordWebhook, or sendUsingGoogleChatWebhook',
+        'Only one sending method can be used at a time. Choose either sendUsingWebhook, sendUsingBot, sendUsingDiscordWebhook, sendUsingGoogleChatWebhook, or sendUsingMicrosoftTeamsWebhook',
     };
   }
 
