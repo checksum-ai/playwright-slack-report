@@ -61,17 +61,19 @@ class MicrosoftTeamsWebhookClient {
         }
     }
     generatePayload(summaryResults, maxNumberOfFailures) {
-        const { passed = 0, failed = 0, skipped = 0, flaky = 0 } = summaryResults;
-        const totalTests = passed + failed + skipped + (flaky || 0);
-        const statusEmoji = failed > 0 ? '❌' : '✅';
+        const { passed = 0, failed = 0, skipped = 0, flaky = 0, bug = 0, recovered = 0 } = summaryResults;
+        const totalTests = passed + failed + skipped + (flaky || 0) + bug + recovered;
+        const statusEmoji = (failed > 0 || bug > 0) ? '❌' : '✅';
         const title = this.webhookConfig.title || '🎭 Playwright Test Results';
         // Build the main facts array
         const facts = [
             { name: 'Total Tests', value: totalTests.toString() },
             { name: '✅ Passed', value: passed.toString() },
             { name: '❌ Failed', value: failed.toString() },
+            ...(bug > 0 ? [{ name: '🐞 Bugs', value: bug.toString() }] : []),
+            ...(recovered > 0 ? [{ name: '🔄 Recovered', value: recovered.toString() }] : []),
             { name: '⏩ Skipped', value: skipped.toString() },
-            ...(flaky ? [{ name: '🔄 Flaky', value: flaky.toString() }] : []),
+            ...(flaky && flaky > 0 ? [{ name: '⚠️ Flaky', value: flaky.toString() }] : []),
         ];
         // Add meta information
         if (summaryResults.meta && summaryResults.meta.length > 0) {
@@ -103,8 +105,8 @@ class MicrosoftTeamsWebhookClient {
             });
         }
         const payload = {
-            text: `${title}: ${statusEmoji} ${passed} passed, ${failed} failed, ${skipped} skipped`,
-            themeColor: this.webhookConfig.themeColor || (failed > 0 ? '#ff0000' : '#00ff00'),
+            text: `${title}: ${statusEmoji} ${passed} passed, ${failed} failed${bug > 0 ? `, ${bug} bugs` : ''}${recovered > 0 ? `, ${recovered} recovered` : ''}, ${skipped} skipped`,
+            themeColor: this.webhookConfig.themeColor || ((failed > 0 || bug > 0) ? '#ff0000' : '#00ff00'),
             sections,
         };
         return payload;

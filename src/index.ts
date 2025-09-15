@@ -3,6 +3,8 @@ export type SummaryResults = {
   failed: number;
   flaky: number | undefined;
   skipped: number;
+  bug: number;
+  recovered: number;
   failures: Array<failure>;
   meta?: Meta;
   tests: Array<{
@@ -14,7 +16,8 @@ export type SummaryResults = {
     reason: string;
     retry: number;
     startedAt: string;
-    status: 'passed' | 'failed' | 'timedOut' | 'skipped';
+    status: 'passed' | 'failed' | 'timedOut' | 'skipped' | 'bug' | 'recovered' | 'flaky';
+    isBug?: boolean;
     attachments?: {
       body: string | undefined | Buffer;
       contentType: string;
@@ -37,6 +40,12 @@ export interface JSONResult {
   suites: Suite[];
   errors: any[];
   stats: Stats;
+  checksumMetadata?: {
+    recovered: number;
+    tests: Array<{
+      recovered: boolean;
+    }>;
+  };
 }
 
 export interface Config {
@@ -240,4 +249,6 @@ export interface Stats {
   skipped: number;
   unexpected: number;
   flaky: number;
+  bug?: number;
+  recovered?: number;
 }

@@ -136,10 +136,10 @@ export default class GoogleChatWebhookClient {
     summaryResults: SummaryResults,
     maxNumberOfFailures: number,
   ): GoogleChatCardPayload {
-    const { passed = 0, failed = 0, skipped = 0, flaky = 0 } = summaryResults;
-    const totalTests = passed + failed + skipped + (flaky || 0);
+    const { passed = 0, failed = 0, skipped = 0, flaky = 0, bug = 0, recovered = 0 } = summaryResults;
+    const totalTests = passed + failed + skipped + (flaky || 0) + bug + recovered;
 
-    const statusEmoji = failed > 0 ? '❌' : '✅';
+    const statusEmoji = (failed > 0 || bug > 0) ? '❌' : '✅';
     
     // Create the main card payload
     const payload: GoogleChatCardPayload = {
@@ -164,8 +164,10 @@ export default class GoogleChatWebhookClient {
                     content: [
                       `✅ Passed: ${passed}`,
                       `❌ Failed: ${failed}`,
+                      bug > 0 ? `🐞 Bugs: ${bug}` : null,
+                      recovered > 0 ? `🔄 Recovered: ${recovered}` : null,
                       `⏩ Skipped: ${skipped}`,
-                      flaky ? `🔄 Flaky: ${flaky}` : null,
+                      flaky && flaky > 0 ? `⚠️ Flaky: ${flaky}` : null,
                     ]
                       .filter(Boolean)
                       .join('\n'),

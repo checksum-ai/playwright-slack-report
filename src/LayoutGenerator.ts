@@ -18,9 +18,13 @@ const generateBlocks = async (
     text: {
       type: 'mrkdwn',
       text: `✅ *${summaryResults.passed}* | ❌ *${summaryResults.failed}* |${
-        summaryResults.flaky !== undefined
-          ? ` 🟡 *${summaryResults.flaky}* | `
-          : ' '
+        summaryResults.bug > 0 ? ` 🐞 *${summaryResults.bug}* | ` : ''
+      }${
+        summaryResults.recovered > 0 ? ` 🔄 *${summaryResults.recovered}* | ` : ''
+      }${
+        summaryResults.flaky !== undefined && summaryResults.flaky > 0
+          ? ` ⚠️ *${summaryResults.flaky}* | `
+          : ''
       }⏩ *${summaryResults.skipped}*`,
     },
   };
@@ -97,8 +101,12 @@ const generateFailures = async (
   ];
 };
 
-const generateFallbackText = (summaryResults: SummaryResults): string => `✅ ${summaryResults.passed} ❌ ${summaryResults.failed} ${
-  summaryResults.flaky !== undefined ? ` 🟡 ${summaryResults.flaky} ` : ' '
-}⏩ ${summaryResults.skipped}`;
+const generateFallbackText = (summaryResults: SummaryResults): string => `✅ ${summaryResults.passed} ❌ ${summaryResults.failed}${
+  summaryResults.bug > 0 ? ` 🐞 ${summaryResults.bug}` : ''
+}${
+  summaryResults.recovered > 0 ? ` 🔄 ${summaryResults.recovered}` : ''
+}${
+  summaryResults.flaky !== undefined && summaryResults.flaky > 0 ? ` ⚠️ ${summaryResults.flaky}` : ''
+} ⏩ ${summaryResults.skipped}`;
 
 export { generateBlocks, generateFailures, generateFallbackText };

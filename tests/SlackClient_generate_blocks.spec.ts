@@ -9,6 +9,8 @@ test.describe('SlackClient.generateBlocks()', () => {
         passed: 0,
         flaky: undefined,
         skipped: 0,
+        bug: 0,
+        recovered: 0,
         failures: [
           { suite: 'smoke', test: 'test', failureReason: 'message' },
           { suite: 'smoke', test: 'test2', failureReason: 'message' },
@@ -34,6 +36,8 @@ test.describe('SlackClient.generateBlocks()', () => {
         passed: 0,
         flaky: undefined,
         skipped: 0,
+        bug: 0,
+        recovered: 0,
         failures: [
           { suite: 'smoke', test: 'test', failureReason: 'message' },
           { suite: 'smoke', test: 'test2', failureReason: 'message' },
@@ -59,6 +63,8 @@ test.describe('SlackClient.generateBlocks()', () => {
         passed: 1,
         flaky: undefined,
         skipped: 1,
+        bug: 0,
+        recovered: 0,
         failures: [{ suite: 'smoke', test: 'test', failureReason: 'message' }],
         tests: [],
       },
@@ -99,6 +105,8 @@ test.describe('SlackClient.generateBlocks()', () => {
         passed: 1,
         flaky: 1,
         skipped: 1,
+        bug: 0,
+        recovered: 0,
         failures: [{ suite: 'smoke', test: 'test', failureReason: 'message' }],
         tests: [],
       },
@@ -139,6 +147,8 @@ test.describe('SlackClient.generateBlocks()', () => {
         passed: 1,
         flaky: undefined,
         skipped: 1,
+        bug: 0,
+        recovered: 0,
         failures: [],
         tests: [],
         meta: [
@@ -182,6 +192,8 @@ test.describe('SlackClient.generateBlocks()', () => {
         passed: 0,
         flaky: undefined,
         skipped: 1,
+        bug: 0,
+        recovered: 0,
         failures: [],
         tests: [
           {

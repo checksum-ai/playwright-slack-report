@@ -141,7 +141,7 @@ class SlackReporter implements Reporter {
       this.suite.allTests(),
     );
     resultSummary.meta = this.meta;
-    const testsFailed = resultSummary.failed > 0;
+    const testsFailed = resultSummary.failed > 0 || resultSummary.bug > 0;
 
     if (this.sendResults === 'on-failure' && !testsFailed) {
       this.log('⏩ Slack reporter - no failures found');
@@ -153,6 +153,8 @@ class SlackReporter implements Reporter {
       && resultSummary.failed === 0
       && resultSummary.flaky === 0
       && resultSummary.skipped === 0
+      && resultSummary.bug === 0
+      && resultSummary.recovered === 0
       && resultSummary.failures.length === 0
       && resultSummary.tests.length === 0
     ) {

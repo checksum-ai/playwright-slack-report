@@ -14,9 +14,9 @@ const generateBlocks = async (summaryResults, maxNumberOfFailures) => {
         type: 'section',
         text: {
             type: 'mrkdwn',
-            text: `✅ *${summaryResults.passed}* | ❌ *${summaryResults.failed}* |${summaryResults.flaky !== undefined
-                ? ` 🟡 *${summaryResults.flaky}* | `
-                : ' '}⏩ *${summaryResults.skipped}*`,
+            text: `✅ *${summaryResults.passed}* | ❌ *${summaryResults.failed}* |${summaryResults.bug > 0 ? ` 🐞 *${summaryResults.bug}* | ` : ''}${summaryResults.recovered > 0 ? ` 🔄 *${summaryResults.recovered}* | ` : ''}${summaryResults.flaky !== undefined && summaryResults.flaky > 0
+                ? ` ⚠️ *${summaryResults.flaky}* | `
+                : ''}⏩ *${summaryResults.skipped}*`,
         },
     };
     const fails = await generateFailures(summaryResults, maxNumberOfFailures);
@@ -76,6 +76,6 @@ const generateFailures = async (summaryResults, maxNumberOfFailures) => {
     ];
 };
 exports.generateFailures = generateFailures;
-const generateFallbackText = (summaryResults) => `✅ ${summaryResults.passed} ❌ ${summaryResults.failed} ${summaryResults.flaky !== undefined ? ` 🟡 ${summaryResults.flaky} ` : ' '}⏩ ${summaryResults.skipped}`;
+const generateFallbackText = (summaryResults) => `✅ ${summaryResults.passed} ❌ ${summaryResults.failed}${summaryResults.bug > 0 ? ` 🐞 ${summaryResults.bug}` : ''}${summaryResults.recovered > 0 ? ` 🔄 ${summaryResults.recovered}` : ''}${summaryResults.flaky !== undefined && summaryResults.flaky > 0 ? ` ⚠️ ${summaryResults.flaky}` : ''} ⏩ ${summaryResults.skipped}`;
 exports.generateFallbackText = generateFallbackText;
 //# sourceMappingURL=LayoutGenerator.js.map

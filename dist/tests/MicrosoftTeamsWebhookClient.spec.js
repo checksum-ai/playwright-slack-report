@@ -10,6 +10,8 @@ const mockSummaryResults = {
     passed: 1,
     flaky: undefined,
     skipped: 1,
+    bug: 0,
+    recovered: 0,
     failures: [
         {
             suite: 'smoke',

@@ -51,24 +51,32 @@ class ResultsParser {
             await this.parseTestSuite(suite, retries);
         }
         const failures = await this.getFailures();
+        // Collect all tests to count custom statuses
+        let allTests = [];
+        for (const suite of this.result) {
+            allTests = allTests.concat(suite.testSuite.tests);
+        }
+        // Count our custom statuses from processed tests
+        const bugCount = allTests.filter(test => test.isBug === true).length;
+        const recoveredCount = allTests.filter(test => test.status === 'recovered').length;
+        const flakyCount = allTests.filter(test => test.status === 'flaky').length;
         const summary = {
             passed: parsedData.stats.expected,
             failed: parsedData.stats.unexpected,
-            flaky: parsedData.stats.flaky,
+            flaky: flakyCount,
             skipped: parsedData.stats.skipped,
+            bug: bugCount,
+            recovered: recoveredCount,
             failures,
-            tests: [],
+            tests: allTests,
         };
-        for (const suite of this.result) {
-            summary.tests = summary.tests.concat(suite.testSuite.tests);
-        }
         return summary;
     }
     async parseTestSuite(suites, retries) {
         let testResults = [];
         // if it has direct specs
         if (suites.specs?.length > 0) {
-            testResults = await this.parseTests(suites.title, suites.specs, retries);
+            testResults = await this.parseTests(suites.title, suites.specs, retries, suites);
             this.updateResults({
                 testSuite: {
                     title: suites.title ?? suites.file,
@@ -83,29 +91,62 @@ class ResultsParser {
             }
         }
     }
-    async parseTests(suiteName, specs, retries) {
+    async parseTests(suiteName, specs, retries, suite) {
         const testResults = [];
         for (const spec of specs) {
             for (const test of spec.tests) {
                 const { expectedStatus } = test;
-                for (const result of test.results) {
-                    testResults.push({
-                        suiteName,
-                        name: spec.title,
-                        status: result.status === 'unexpected' ? 'failed' : result.status,
-                        browser: test.projectName,
-                        projectName: test.projectName,
-                        retry: result.retry,
-                        retries,
-                        startedAt: result.startTime,
-                        endedAt: new Date(new Date(result.startTime).getTime() + result.duration).toISOString(),
-                        reason: result.error
-                            ? this.getFailure(result.error.snippet, result.error.stack)
-                            : '',
-                        attachments: result.attachments,
-                        expectedStatus,
-                    });
+                const results = test.results;
+                // Analyze all results to determine final test status
+                let finalStatus = 'passed';
+                let isRecovered = false;
+                let reason = '';
+                let lastResult = results[results.length - 1]; // Get the last (final) result
+                // Check if this is a recovered test
+                isRecovered = suite?.recovered === true ||
+                    results.some((result) => result.annotations?.some((annotation) => annotation.type?.includes('auto-recovered')));
+                // Check if this test is marked as a bug
+                const hasBugInTitle = spec.title.includes('@bug');
+                const hasTestLevelBugAnnotation = test.annotations?.some((annotation) => annotation.type === 'bug');
+                const hasResultLevelBugAnnotation = results.some((result) => result.annotations?.some((annotation) => annotation.type === 'bug'));
+                const isBugTest = hasBugInTitle || hasTestLevelBugAnnotation || hasResultLevelBugAnnotation;
+                if (isRecovered) {
+                    finalStatus = 'recovered';
+                    reason = lastResult.error ? this.getFailure(lastResult.error.snippet, lastResult.error.stack) : '';
                 }
+                else if (results.length > 1) {
+                    // Multiple results means there were retries
+                    const firstFailed = results[0].status === 'failed' || results[0].status === 'timedOut';
+                    const finalPassed = lastResult.status === 'passed';
+                    if (firstFailed && finalPassed) {
+                        finalStatus = 'flaky';
+                        reason = results[0].error ? this.getFailure(results[0].error.snippet, results[0].error.stack) : '';
+                    }
+                    else {
+                        finalStatus = lastResult.status === 'unexpected' ? 'failed' : lastResult.status;
+                        reason = lastResult.error ? this.getFailure(lastResult.error.snippet, lastResult.error.stack) : '';
+                    }
+                }
+                else {
+                    // Single result
+                    finalStatus = lastResult.status === 'unexpected' ? 'failed' : lastResult.status;
+                    reason = lastResult.error ? this.getFailure(lastResult.error.snippet, lastResult.error.stack) : '';
+                }
+                testResults.push({
+                    suiteName,
+                    name: spec.title,
+                    status: finalStatus,
+                    isBug: isBugTest,
+                    browser: test.projectName,
+                    projectName: test.projectName,
+                    retry: lastResult.retry,
+                    retries,
+                    startedAt: lastResult.startTime,
+                    endedAt: new Date(new Date(lastResult.startTime).getTime() + lastResult.duration).toISOString(),
+                    reason,
+                    attachments: lastResult.attachments,
+                    expectedStatus,
+                });
             }
         }
         return testResults;
@@ -134,11 +175,26 @@ class ResultsParser {
         // eslint-disable-next-line no-plusplus
         for (const test of allTests)
             ++stats[test.outcome()];
+        // Count bug and recovered statuses from our internal test results
+        let bugCount = 0;
+        let recoveredCount = 0;
+        for (const suite of this.result) {
+            for (const test of suite.testSuite.tests) {
+                if (test.status === 'bug') {
+                    bugCount += 1;
+                }
+                else if (test.status === 'recovered') {
+                    recoveredCount += 1;
+                }
+            }
+        }
         const summary = {
             passed: stats.expected,
             failed: stats.unexpected,
             flaky: stats.flaky,
             skipped: stats.skipped,
+            bug: bugCount,
+            recovered: recoveredCount,
             failures,
             tests: [],
         };
@@ -153,9 +209,11 @@ class ResultsParser {
             for (const test of suite.testSuite.tests) {
                 if (test.status === 'failed'
                     || test.status === 'timedOut'
+                    || test.isBug === true
                     || test.expectedStatus === 'failed') {
-                    // only flag as failed if the last attempt has failed
-                    if (test.retries === test.retry) {
+                    // Bug tests always count as failures
+                    // For other statuses, only flag as failed if the last attempt has failed
+                    if (test.isBug === true || test.retries === test.retry) {
                         failures.push({
                             suite: test.suiteName,
                             test: ResultsParser.getTestName(test),

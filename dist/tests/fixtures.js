@@ -21,6 +21,8 @@ exports.test = test_1.test.extend({
         passed: 1,
         flaky: 0,
         skipped: 0,
+        bug: 0,
+        recovered: 0,
         failures: [],
         tests: [
             {
@@ -39,6 +41,8 @@ exports.test = test_1.test.extend({
         passed: 0,
         flaky: 0,
         skipped: 0,
+        bug: 0,
+        recovered: 0,
         failures: [
             {
                 suite: 'tests/t1.spec.ts',
@@ -71,6 +75,8 @@ exports.test = test_1.test.extend({
         passed: 1,
         flaky: 1,
         skipped: 0,
+        bug: 0,
+        recovered: 0,
         failures: [],
         tests: [
             {

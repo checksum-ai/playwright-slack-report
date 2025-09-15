@@ -1,0 +1,98 @@
+{
+  "config": {
+    "projects": [
+      {
+        "retries": 1
+      }
+    ]
+  },
+  "suites": [
+    {
+      "title": "Test Suite",
+      "specs": [
+        {
+          "title": "Passed Test",
+          "tests": [
+            {
+              "projectName": "chrome",
+              "results": [
+                {
+                  "status": "passed",
+                  "retry": 0,
+                  "startTime": "2023-01-01T00:00:00.000Z",
+                  "duration": 1000
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Bug Test",
+          "tests": [
+            {
+              "projectName": "chrome",
+              "results": [
+                {
+                  "status": "bug",
+                  "retry": 1,
+                  "startTime": "2023-01-01T00:00:00.000Z",
+                  "duration": 1000,
+                  "error": {
+                    "message": "Known bug: Login form validation issue",
+                    "stack": "Error: Known bug\n    at test.spec.ts:10:5",
+                    "snippet": "expect(loginButton).toBeVisible()"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Recovered Test",
+          "tests": [
+            {
+              "projectName": "chrome",
+              "results": [
+                {
+                  "status": "recovered",
+                  "retry": 0,
+                  "startTime": "2023-01-01T00:00:00.000Z",
+                  "duration": 1000
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Failed Test",
+          "tests": [
+            {
+              "projectName": "chrome",
+              "results": [
+                {
+                  "status": "failed",
+                  "retry": 1,
+                  "startTime": "2023-01-01T00:00:00.000Z",
+                  "duration": 1000,
+                  "error": {
+                    "message": "Test failed",
+                    "stack": "Error: Test failed\n    at test.spec.ts:15:5",
+                    "snippet": "expect(element).toBeVisible()"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "expected": 1,
+    "unexpected": 1,
+    "skipped": 0,
+    "flaky": 0,
+    "bug": 1,
+    "recovered": 1
+  }
+}

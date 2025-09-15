@@ -1,0 +1,18 @@
+{
+  "sendResults": "always",
+  "slackLogLevel": "info",
+  "maxNumberOfFailures": 10,
+  "meta": [
+    {
+      "key": "Test Environment",
+      "value": "Local Testing"
+    },
+    {
+      "key": "Branch",
+      "value": "feature/bug-recovered-status"
+    }
+  ],
+  "sendUsingWebhook": {
+    "webhookUrl": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+  }
+}

@@ -10,7 +10,8 @@ export type testResult = {
     retry: number;
     retries: number;
     startedAt: string;
-    status: 'passed' | 'failed' | 'timedOut' | 'skipped';
+    status: 'passed' | 'failed' | 'timedOut' | 'skipped' | 'bug' | 'recovered' | 'flaky';
+    isBug?: boolean;
     expectedStatus?: 'passed' | 'failed' | 'skipped';
     attachments?: {
         body: string | undefined | Buffer;
@@ -31,7 +32,7 @@ export default class ResultsParser {
     constructor();
     parseFromJsonFile(filePath: string): Promise<SummaryResults>;
     parseTestSuite(suites: any, retries: number): Promise<void>;
-    parseTests(suiteName: any, specs: any, retries: number): Promise<testResult[]>;
+    parseTests(suiteName: any, specs: any, retries: number, suite?: any): Promise<testResult[]>;
     getFailure(snippet: string, stack: string): string;
     getExpectedFailure(test: any): any;
     getParsedResults(allTests: Array<TestCase>): Promise<SummaryResults>;

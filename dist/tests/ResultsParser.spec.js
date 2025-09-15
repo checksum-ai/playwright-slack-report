@@ -409,6 +409,8 @@ test.describe('ResultsParser', () => {
             failed: 1,
             flaky: 0,
             skipped: 0,
+            bug: 0,
+            recovered: 0,
             failures: [],
             tests: [
                 {
@@ -513,6 +515,51 @@ test.describe('ResultsParser', () => {
         const resultsParser = new ResultsParser_1.default();
         const result = resultsParser.getExpectedFailure({});
         (0, test_1.expect)(result).toEqual('');
+    });
+    test('handles bug and recovered statuses correctly', async ({}) => {
+        const resultsParser = new ResultsParser_1.default();
+        // Add a bug status test
+        resultsParser.addTestResult('Bug Test Suite', {
+            title: 'Bug Test',
+            results: [
+                {
+                    status: 'bug',
+                    retry: 0,
+                    startTime: '2023-01-01T00:00:00.000Z',
+                    duration: 1000,
+                    errors: [],
+                    error: { message: 'Known bug issue', stack: '' }
+                }
+            ],
+            retries: 0,
+            _projectId: 'test-project'
+        }, [{ projectName: 'test-project', browser: 'chrome' }]);
+        // Add a recovered status test
+        resultsParser.addTestResult('Recovered Test Suite', {
+            title: 'Recovered Test',
+            results: [
+                {
+                    status: 'recovered',
+                    retry: 0,
+                    startTime: '2023-01-01T00:00:00.000Z',
+                    duration: 1000,
+                    errors: [],
+                    error: null
+                }
+            ],
+            retries: 0,
+            _projectId: 'test-project'
+        }, [{ projectName: 'test-project', browser: 'chrome' }]);
+        const results = await resultsParser.getParsedResults([]);
+        (0, test_1.expect)(results.bug).toEqual(1);
+        (0, test_1.expect)(results.recovered).toEqual(1);
+        (0, test_1.expect)(results.tests).toHaveLength(2);
+        (0, test_1.expect)(results.tests[0].status).toEqual('bug');
+        (0, test_1.expect)(results.tests[1].status).toEqual('recovered');
+        // Bug should appear in failures, recovered should not
+        const failures = await resultsParser.getFailures();
+        (0, test_1.expect)(failures).toHaveLength(1);
+        (0, test_1.expect)(failures[0].test).toContain('Bug Test');
     });
 });
 //# sourceMappingURL=ResultsParser.spec.js.map

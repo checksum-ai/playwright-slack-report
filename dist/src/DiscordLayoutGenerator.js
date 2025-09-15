@@ -10,6 +10,10 @@ function getStatusEmoji(status) {
             return '✅';
         case 'failed':
             return '❌';
+        case 'bug':
+            return '🐞';
+        case 'recovered':
+            return '🔄';
         case 'skipped':
             return '⏩';
         case 'timedOut':
@@ -26,14 +30,16 @@ function truncateString(str, maxLength) {
 async function generateDiscordEmbeds(summaryResults, maxNumberOfFailures, customColor) {
     const embeds = [];
     const color = customColor ? parseInt(customColor.replace('#', ''), 16) :
-        summaryResults.failed > 0 ? ERROR_COLOR : SUCCESS_COLOR;
+        (summaryResults.failed > 0 || summaryResults.bug > 0) ? ERROR_COLOR : SUCCESS_COLOR;
     // Summary embed
     embeds.push({
         title: '🎭 Playwright Results',
         description: [
             `${getStatusEmoji('passed')} **${summaryResults.passed}** Passed`,
             `${getStatusEmoji('failed')} **${summaryResults.failed}** Failed`,
-            summaryResults.flaky !== undefined ? `🟡 **${summaryResults.flaky}** Flaky` : null,
+            summaryResults.bug > 0 ? `${getStatusEmoji('bug')} **${summaryResults.bug}** Bugs` : null,
+            summaryResults.recovered > 0 ? `${getStatusEmoji('recovered')} **${summaryResults.recovered}** Recovered` : null,
+            summaryResults.flaky !== undefined && summaryResults.flaky > 0 ? `⚠️ **${summaryResults.flaky}** Flaky` : null,
             `${getStatusEmoji('skipped')} **${summaryResults.skipped}** Skipped`,
         ].filter(Boolean).join(' | '),
         color,

@@ -103,7 +103,7 @@ class SlackReporter {
         }
         const resultSummary = await this.resultsParser.getParsedResults(this.suite.allTests());
         resultSummary.meta = this.meta;
-        const testsFailed = resultSummary.failed > 0;
+        const testsFailed = resultSummary.failed > 0 || resultSummary.bug > 0;
         if (this.sendResults === 'on-failure' && !testsFailed) {
             this.log('⏩ Slack reporter - no failures found');
             return;
@@ -112,6 +112,8 @@ class SlackReporter {
             && resultSummary.failed === 0
             && resultSummary.flaky === 0
             && resultSummary.skipped === 0
+            && resultSummary.bug === 0
+            && resultSummary.recovered === 0
             && resultSummary.failures.length === 0
             && resultSummary.tests.length === 0) {
             this.log('⏩ Slack reporter - Playwright reported : "No tests found"');

@@ -17,6 +17,22 @@ Publish your Playwright test results to your favorite Slack, Discord, Google Cha
 - 📄 Include additional meta information into your test summary e.g. Branch, BuildId etc
 - 🧑‍🎨 Define your own custom message layouts!
 
+## 📊 Supported Test Statuses
+
+This reporter supports the following test statuses with corresponding emoji indicators:
+
+- ✅ **Passed** - Tests that completed successfully
+- ❌ **Failed** - Tests that failed due to assertions or errors
+- 🐛 **Bug** - Tests that failed due to known bugs (new in v2.x)
+- 🔄 **Recovered** - Tests that initially failed but were automatically recovered (new in v2.x)
+- 🟡 **Flaky** - Tests that passed after retries
+- ⏩ **Skipped** - Tests that were skipped
+
+### Status Behavior:
+- **Bug status**: Tests marked as bugs will appear in the failures section and trigger failure notifications (when `sendResults` is set to `"on-failure"`)
+- **Recovered status**: Tests marked as recovered will NOT appear in failures and indicate successful automatic recovery
+- Both new statuses are included in the total test count and summary display
+
 # 📦 Installation
 
 Run following commands:
@@ -849,7 +865,11 @@ export async function generateCustomLayoutAsync(
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: `✅ *${summaryResults.passed}* | ❌ *${summaryResults.failed}* | ⏩ *${summaryResults.skipped}*`,
+      text: `✅ *${summaryResults.passed}* | ❌ *${summaryResults.failed}* |${
+        summaryResults.bug > 0 ? ` 🐛 *${summaryResults.bug}* | ` : ''
+      }${
+        summaryResults.recovered > 0 ? ` 🔄 *${summaryResults.recovered}* | ` : ''
+      } ⏩ *${summaryResults.skipped}*`,
     },
   };
 
@@ -956,7 +976,11 @@ export default async function generateCustomLayout(
     type: 'section',
     text: {
       type: 'mrkdwn',
-      text: `✅ *${summaryResults.passed}* | ❌ *${summaryResults.failed}* | ⏩ *${summaryResults.skipped}*`,
+      text: `✅ *${summaryResults.passed}* | ❌ *${summaryResults.failed}* |${
+        summaryResults.bug > 0 ? ` 🐛 *${summaryResults.bug}* | ` : ''
+      }${
+        summaryResults.recovered > 0 ? ` 🔄 *${summaryResults.recovered}* | ` : ''
+      } ⏩ *${summaryResults.skipped}*`,
     },
   };
 

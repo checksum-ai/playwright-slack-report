@@ -25,6 +25,10 @@ function getStatusEmoji(status: string): string {
       return '✅';
     case 'failed':
       return '❌';
+    case 'bug':
+      return '🐞';
+    case 'recovered':
+      return '🔄';
     case 'skipped':
       return '⏩';
     case 'timedOut':
@@ -45,8 +49,8 @@ export async function generateDiscordEmbeds(
   customColor?: string
 ): Promise<DiscordEmbed[]> {
   const embeds: DiscordEmbed[] = [];
-  const color = customColor ? parseInt(customColor.replace('#', ''), 16) : 
-                summaryResults.failed > 0 ? ERROR_COLOR : SUCCESS_COLOR;
+  const color = customColor ? parseInt(customColor.replace('#', ''), 16) :
+                (summaryResults.failed > 0 || summaryResults.bug > 0) ? ERROR_COLOR : SUCCESS_COLOR;
 
   // Summary embed
   embeds.push({
@@ -54,7 +58,9 @@ export async function generateDiscordEmbeds(
     description: [
       `${getStatusEmoji('passed')} **${summaryResults.passed}** Passed`,
       `${getStatusEmoji('failed')} **${summaryResults.failed}** Failed`,
-      summaryResults.flaky !== undefined ? `🟡 **${summaryResults.flaky}** Flaky` : null,
+      summaryResults.bug > 0 ? `${getStatusEmoji('bug')} **${summaryResults.bug}** Bugs` : null,
+      summaryResults.recovered > 0 ? `${getStatusEmoji('recovered')} **${summaryResults.recovered}** Recovered` : null,
+      summaryResults.flaky !== undefined && summaryResults.flaky > 0 ? `⚠️ **${summaryResults.flaky}** Flaky` : null,
       `${getStatusEmoji('skipped')} **${summaryResults.skipped}** Skipped`,
     ].filter(Boolean).join(' | '),
     color,

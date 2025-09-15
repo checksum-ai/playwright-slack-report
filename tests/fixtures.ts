@@ -24,6 +24,8 @@ export const test = base.extend<SlackClientFixture>({
     passed: 1,
     flaky: 0,
     skipped: 0,
+    bug: 0,
+    recovered: 0,
     failures: [],
     tests: [
       {
@@ -42,6 +44,8 @@ export const test = base.extend<SlackClientFixture>({
     passed: 0,
     flaky: 0,
     skipped: 0,
+    bug: 0,
+    recovered: 0,
     failures: [
       {
         suite: 'tests/t1.spec.ts',
@@ -76,6 +80,8 @@ export const test = base.extend<SlackClientFixture>({
     passed: 1,
     flaky: 1,
     skipped: 0,
+    bug: 0,
+    recovered: 0,
     failures: [],
     tests: [
       {
