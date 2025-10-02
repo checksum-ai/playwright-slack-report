@@ -58,8 +58,23 @@ class ResultsParser {
         }
         // Count our custom statuses from processed tests (with dual counting support)
         const bugCount = allTests.filter(test => test.isBug === true).length;
-        const recoveredCount = allTests.filter(test => test.isRecovered || test.status === 'recovered').length;
         const flakyCount = allTests.filter(test => test.isFlaky || test.status === 'flaky').length;
+        // Count recovered tests from both checksumMetadata AND processed test flags
+        let recoveredCount = 0;
+        // First check checksumMetadata (preferred method for ChecksumAI reports)
+        if (parsedData.checksumMetadata) {
+            for (const [testId, retries] of Object.entries(parsedData.checksumMetadata)) {
+                // Check if any retry has autoRecovered: true
+                const wasRecovered = Object.values(retries).some((retry) => retry.autoRecoveryMetadata?.data?.autoRecovered === true);
+                if (wasRecovered) {
+                    recoveredCount++;
+                }
+            }
+        }
+        else {
+            // Fallback: count from processed tests (for reports with annotations but no metadata)
+            recoveredCount = allTests.filter(test => test.isRecovered || test.status === 'recovered').length;
+        }
         const summary = {
             passed: parsedData.stats.expected,
             failed: parsedData.stats.unexpected,
@@ -102,26 +117,13 @@ class ResultsParser {
                 let isRecovered = false;
                 let reason = '';
                 let lastResult = results[results.length - 1]; // Get the last (final) result
-                // Check if this is a recovered test (comprehensive detection)
-                isRecovered = suite?.recovered === true ||
-                    results.some((result) => result.annotations?.some((annotation) => annotation.type?.includes('auto-recovered')) ||
-                        result.errors?.some((error) => error.message?.includes('auto-recovered')) ||
-                        result.steps?.some((step) => step.title?.includes('auto-recovered') ||
-                            step.error?.message?.includes('auto-recovered'))) ||
-                    test.annotations?.some((annotation) => annotation.type?.includes('auto-recovered')) ||
-                    // Also check if test has retries and ultimate success (potential recovery)
-                    (results.length > 1 &&
-                        results.some((result) => result.status === 'failed') &&
-                        lastResult.status === 'passed' &&
-                        results.some((result) => result.annotations?.some((annotation) => annotation.type?.includes('✅') || annotation.type?.includes('recovered')))) ||
-                    // Specific requirement: Both gBQh4 tests should be counted as recovered
-                    (spec.title.includes('Create a quote for a policy and verify the quote has been issued') &&
-                        results.length > 1);
+                // Check if this is a recovered test
+                // Check for auto-recovery in annotations (supports both exact match and contains)
+                isRecovered = test.annotations?.some((annotation) => annotation.type && (annotation.type === 'auto-recovered' ||
+                    annotation.type.includes('auto-recovered')));
                 // Check if this test is marked as a bug
-                const hasBugInTitle = spec.title.includes('@bug');
-                const hasTestLevelBugAnnotation = test.annotations?.some((annotation) => annotation.type === 'bug');
-                const hasResultLevelBugAnnotation = results.some((result) => result.annotations?.some((annotation) => annotation.type === 'bug'));
-                const isBugTest = hasBugInTitle || hasTestLevelBugAnnotation || hasResultLevelBugAnnotation;
+                // Only check test-level annotations to match backend logic
+                const isBugTest = test.annotations?.some((annotation) => annotation.type === 'bug');
                 // Determine if test is flaky (has retries or marked as flaky)
                 let isFlaky = false;
                 if (results.length > 1) {
@@ -233,7 +235,7 @@ class ResultsParser {
             }
         }
         const summary = {
-            passed: stats.expected - recoveredFromPassedCount - flakyFromExpectedCount, // Subtract both recovered and flaky from passed
+            passed: stats.expected, // Use Playwright's expected count directly (matches backend)
             failed: stats.unexpected,
             flaky: flakyCount, // Use our custom flaky count (can overlap with recovered)
             skipped: stats.skipped,

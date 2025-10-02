@@ -17,11 +17,13 @@ function convertChecksumToPlaywright(checksumReport, outputPath) {
   function determineTestStatus(test, fileStats, checksumMetadata) {
     const { outcome, ok, tags = [], annotations = [], testId } = test;
     
-    // Check for @bug tag
-    const hasBugTag = tags.some(tag => tag === '@bug');
-    
+    // Check for bug annotation (ONLY check annotations, not tags - matches backend)
+    const hasBugAnnotation = annotations.some(annotation =>
+      annotation.type && annotation.type === 'bug'
+    );
+
     // Check for auto-recovery in annotations
-    const hasAutoRecoveryAnnotation = annotations.some(annotation => 
+    const hasAutoRecoveryAnnotation = annotations.some(annotation =>
       annotation.type && annotation.type.includes('auto-recovered')
     );
     
@@ -51,12 +53,14 @@ function convertChecksumToPlaywright(checksumReport, outputPath) {
       primaryStatus: null,
       isFlaky: isFlaky,
       isRecovered: isRecovered,
-      isBug: hasBugTag
+      isBug: hasBugAnnotation  // Only use annotations, not tags
     };
-    
+
     // Determine primary status based on Checksum logic
-    if (hasBugTag) {
+    if (hasBugAnnotation) {
       result.primaryStatus = 'bug';
+    } else if (outcome === 'skipped') {
+      result.primaryStatus = 'skipped';
     } else if (isFlaky) {
       // Flaky is the primary status, but test might also be recovered
       result.primaryStatus = 'flaky';
@@ -146,7 +150,9 @@ function convertChecksumToPlaywright(checksumReport, outputPath) {
       unexpected: 0,
       flaky: 0,
       skipped: 0
-    }
+    },
+    // Preserve checksumMetadata for accurate recovered test counting
+    checksumMetadata: checksumReport.checksumMetadata || {}
   };
   
   let totalPassed = 0;
@@ -172,24 +178,20 @@ function convertChecksumToPlaywright(checksumReport, outputPath) {
       const testResult = determineTestStatus(test, file.stats, checksumReport.checksumMetadata);
       const testStatus = testResult.primaryStatus;
       
-      // Count primary statuses
-      switch (testStatus) {
-        case 'passed': totalPassed++; break;
-        case 'failed': totalFailed++; break;
-        case 'bug': totalBug++; break;
-        case 'recovered': totalRecovered++; break;
-        case 'flaky': totalFlaky++; break;
-        case 'skipped': totalSkipped++; break;
-      }
-      
-      // Count additional characteristics (can overlap with primary status)
-      if (testResult.isFlaky && testStatus !== 'flaky') {
-        // If test is flaky but has a different primary status, still count as flaky
-        totalFlaky++;
-      }
-      if (testResult.isRecovered && testStatus !== 'recovered') {
-        // If test is recovered but has a different primary status, still count as recovered
-        totalRecovered++;
+      // Count primary statuses only (no double counting)
+      // Bug tests are tracked separately and NOT included in passed/failed
+      // This matches website behavior
+      if (testStatus === 'bug') {
+        totalBug++;
+        // Bug tests do NOT count toward passed/failed
+      } else {
+        switch (testStatus) {
+          case 'passed': totalPassed++; break;
+          case 'failed': totalFailed++; break;
+          case 'recovered': totalRecovered++; break;
+          case 'flaky': totalFlaky++; break;
+          case 'skipped': totalSkipped++; break;
+        }
       }
       
       const spec = {
@@ -269,10 +271,11 @@ function convertChecksumToPlaywright(checksumReport, outputPath) {
     playwrightConfig.suites.push(suite);
   });
   
-  // Update stats
+  // Update stats to match backend logic
+  // Bug tests are already counted in totalPassed or totalFailed based on their outcome
   playwrightConfig.stats = {
-    expected: totalPassed + totalRecovered + totalFlaky,
-    unexpected: totalFailed + totalBug,
+    expected: totalPassed + totalRecovered + totalFlaky, // Tests that succeeded
+    unexpected: totalFailed, // Tests that failed (includes bug tests with outcome=unexpected)
     flaky: totalFlaky,
     skipped: totalSkipped
   };
