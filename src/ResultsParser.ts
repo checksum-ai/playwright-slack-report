@@ -84,16 +84,14 @@ export default class ResultsParser {
     let recoveredCount = 0;
 
     // First check checksumMetadata (preferred method for ChecksumAI reports)
-    if (parsedData.checksumMetadata) {
-      for (const [testId, retries] of Object.entries(parsedData.checksumMetadata)) {
-        // Check if any retry has autoRecovered: true
-        const wasRecovered = Object.values(retries as any).some((retry: any) =>
-          retry.autoRecoveryMetadata?.data?.autoRecovered === true
-        );
-        if (wasRecovered) {
-          recoveredCount++;
-        }
-      }
+    if (parsedData.checksumMetadata && parsedData.checksumMetadata.recovered !== undefined) {
+      // Use the recovered count directly from checksumMetadata
+      recoveredCount = parsedData.checksumMetadata.recovered;
+    } else if (parsedData.checksumMetadata && parsedData.checksumMetadata.tests) {
+      // Fallback: check individual test objects for recovered flag
+      recoveredCount = parsedData.checksumMetadata.tests.filter((test: any) =>
+        test.recovered === true
+      ).length;
     } else {
       // Fallback: count from processed tests (for reports with annotations but no metadata)
       recoveredCount = allTests.filter(test =>
@@ -102,8 +100,8 @@ export default class ResultsParser {
     }
 
     const summary: SummaryResults = {
-      passed: parsedData.stats.expected,
-      failed: parsedData.stats.unexpected,
+      passed: parsedData.checksumMetadata?.passed ?? parsedData.stats.expected,
+      failed: parsedData.checksumMetadata?.failed ?? parsedData.stats.unexpected,
       flaky: flakyCount,
       skipped: parsedData.stats.skipped,
       bug: bugCount,
@@ -307,15 +305,13 @@ export default class ResultsParser {
     const failures: Array<failure> = [];
     for (const suite of this.result) {
       for (const test of suite.testSuite.tests) {
+        // Only count actual failures, not bug tests (bugs are tracked separately)
         if (
-          test.status === 'failed'
-          || test.status === 'timedOut'
-          || test.isBug === true
-          || test.expectedStatus === 'failed'
+          (test.status === 'failed' || test.status === 'timedOut' || test.expectedStatus === 'failed')
+          && test.isBug !== true  // Exclude bug tests from failures
         ) {
-          // Bug tests always count as failures
-          // For other statuses, only flag as failed if the last attempt has failed
-          if (test.isBug === true || test.retries === test.retry) {
+          // Only flag as failed if the last attempt has failed
+          if (test.retries === test.retry) {
             failures.push({
               suite: test.suiteName,
               test: ResultsParser.getTestName(test),

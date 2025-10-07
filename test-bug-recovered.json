@@ -31,9 +31,15 @@
           "tests": [
             {
               "projectName": "chrome",
+              "annotations": [
+                {
+                  "type": "bug",
+                  "description": "Known issue with login form validation"
+                }
+              ],
               "results": [
                 {
-                  "status": "bug",
+                  "status": "failed",
                   "retry": 1,
                   "startTime": "2023-01-01T00:00:00.000Z",
                   "duration": 1000,

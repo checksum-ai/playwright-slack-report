@@ -41,9 +41,17 @@ export interface JSONResult {
   errors: any[];
   stats: Stats;
   checksumMetadata?: {
-    recovered: number;
-    tests: Array<{
-      recovered: boolean;
+    passed?: number;
+    failed?: number;
+    bug?: number;
+    recovered?: number;
+    tests?: Array<{
+      checksumTestId?: string;
+      playwrightTestId?: string;
+      success?: boolean;
+      recovered?: boolean;
+      bug?: boolean;
+      outcome?: string;
     }>;
   };
 }
