@@ -6,17 +6,23 @@ interface MicrosoftTeamsWebhookConfig {
   themeColor?: string;
 }
 
+interface AdaptiveCardElement {
+  type: string;
+  [key: string]: any;
+}
+
+interface AdaptiveCard {
+  $schema: string;
+  type: string;
+  version: string;
+  body: AdaptiveCardElement[];
+}
+
 interface MicrosoftTeamsMessagePayload {
-  text: string;
-  themeColor?: string;
-  sections?: Array<{
-    activityTitle?: string;
-    activitySubtitle?: string;
-    facts?: Array<{
-      name: string;
-      value: string;
-    }>;
-    markdown?: boolean;
+  type: string;
+  attachments: Array<{
+    contentType: string;
+    content: AdaptiveCard;
   }>;
 }
 
@@ -113,55 +119,113 @@ export default class MicrosoftTeamsWebhookClient {
 
     const statusEmoji = (failed > 0 || bug > 0) ? '❌' : '✅';
     const title = this.webhookConfig.title || '🎭 Playwright Test Results';
+    const hasFailures = failed > 0 || bug > 0;
+
+    // Build the Adaptive Card body
+    const body: AdaptiveCardElement[] = [];
+
+    // Add title
+    body.push({
+      type: 'TextBlock',
+      text: title,
+      size: 'Large',
+      weight: 'Bolder',
+      color: hasFailures ? 'Attention' : 'Good',
+    });
+
+    // Add subtitle
+    body.push({
+      type: 'TextBlock',
+      text: `${statusEmoji} Test Run Complete`,
+      size: 'Medium',
+      spacing: 'Small',
+    });
 
     // Build the main facts array
     const facts = [
-      { name: 'Total Tests', value: totalTests.toString() },
-      { name: '✅ Passed', value: passed.toString() },
-      { name: '❌ Failed', value: failed.toString() },
-      ...(bug > 0 ? [{ name: '🐞 Bugs', value: bug.toString() }] : []),
-      ...(recovered > 0 ? [{ name: '🔄 Recovered', value: recovered.toString() }] : []),
-      { name: '⏩ Skipped', value: skipped.toString() },
-      ...(flaky && flaky > 0 ? [{ name: '⚠️ Flaky', value: flaky.toString() }] : []),
+      { title: 'Total Tests:', value: totalTests.toString() },
+      { title: '✅ Passed:', value: passed.toString() },
+      { title: '❌ Failed:', value: failed.toString() },
+      ...(bug > 0 ? [{ title: '🐞 Bugs:', value: bug.toString() }] : []),
+      ...(recovered > 0 ? [{ title: '🔄 Recovered:', value: recovered.toString() }] : []),
+      { title: '⏩ Skipped:', value: skipped.toString() },
+      ...(flaky && flaky > 0 ? [{ title: '⚠️ Flaky:', value: flaky.toString() }] : []),
     ];
 
-    // Add meta information
+    // Add main facts
+    body.push({
+      type: 'FactSet',
+      facts,
+    });
+
+    // Add meta information as a separate FactSet
     if (summaryResults.meta && summaryResults.meta.length > 0) {
-      summaryResults.meta.forEach((m) => {
-        facts.push({ name: m.key, value: m.value });
+      const metaFacts = summaryResults.meta.map((m) => ({
+        title: `${m.key}:`,
+        value: m.value,
+      }));
+
+      body.push({
+        type: 'FactSet',
+        facts: metaFacts,
+        spacing: 'Medium',
       });
     }
-
-    const sections = [
-      {
-        activityTitle: title,
-        activitySubtitle: `${statusEmoji} Test Run Complete`,
-        facts,
-        markdown: true,
-      },
-    ];
 
     // Add failures section if any
     if (summaryResults.failures && summaryResults.failures.length > 0) {
-      const failuresText = summaryResults.failures
-        .slice(0, maxNumberOfFailures)
-        .map((failure) => `**${failure.suite} > ${failure.test}**\n${failure.failureReason.substring(0, 500)}`)
-        .join('\n\n');
-
-      sections.push({
-        activityTitle: '🚨 Test Failures',
-        activitySubtitle: summaryResults.failures.length > maxNumberOfFailures 
-          ? `Showing ${maxNumberOfFailures} of ${summaryResults.failures.length} failures`
-          : undefined,
-        facts: [{ name: 'Details', value: failuresText }],
-        markdown: true,
+      body.push({
+        type: 'TextBlock',
+        text: '🚨 Test Failures',
+        size: 'Medium',
+        weight: 'Bolder',
+        spacing: 'Medium',
       });
+
+      if (summaryResults.failures.length > maxNumberOfFailures) {
+        body.push({
+          type: 'TextBlock',
+          text: `Showing ${maxNumberOfFailures} of ${summaryResults.failures.length} failures`,
+          size: 'Small',
+          isSubtle: true,
+          spacing: 'Small',
+        });
+      }
+
+      // Add each failure as separate TextBlocks
+      summaryResults.failures
+        .slice(0, maxNumberOfFailures)
+        .forEach((failure) => {
+          body.push({
+            type: 'TextBlock',
+            text: `**${failure.suite} > ${failure.test}**`,
+            weight: 'Bolder',
+            wrap: true,
+            spacing: 'Small',
+          });
+
+          body.push({
+            type: 'TextBlock',
+            text: failure.failureReason.substring(0, 500),
+            wrap: true,
+            spacing: 'None',
+          });
+        });
     }
 
     const payload: MicrosoftTeamsMessagePayload = {
-      text: `${title}: ${statusEmoji} ${passed} passed, ${failed} failed${bug > 0 ? `, ${bug} bugs` : ''}${recovered > 0 ? `, ${recovered} recovered` : ''}, ${skipped} skipped`,
-      themeColor: this.webhookConfig.themeColor || ((failed > 0 || bug > 0) ? '#ff0000' : '#00ff00'),
-      sections,
+      type: 'message',
+      attachments: [
+        {
+          contentType: 'application/vnd.microsoft.card.adaptive',
+          content: {
+            $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+            type: 'AdaptiveCard',
+            version: '1.3',
+            body,
+          },
+        },
+      ],
     };
 
     return payload;
