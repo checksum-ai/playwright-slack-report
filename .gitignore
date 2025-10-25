@@ -108,7 +108,7 @@ typings/
 
 test-results/
 build/
-
+sample-json-files/
 # VS Code files
 .vscode
 bot

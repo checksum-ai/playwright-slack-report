@@ -12,8 +12,7 @@ export type testResult = {
     startedAt: string;
     status: 'passed' | 'failed' | 'timedOut' | 'skipped' | 'bug' | 'recovered' | 'flaky';
     isBug?: boolean;
-    isFlaky?: boolean;
-    isRecovered?: boolean;
+    attempts?: number;
     expectedStatus?: 'passed' | 'failed' | 'skipped';
     attachments?: {
         body: string | undefined | Buffer;

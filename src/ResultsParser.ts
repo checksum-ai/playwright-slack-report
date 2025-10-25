@@ -24,8 +24,7 @@ export type testResult = {
   startedAt: string;
   status: 'passed' | 'failed' | 'timedOut' | 'skipped' | 'bug' | 'recovered' | 'flaky';
   isBug?: boolean; // Flag to indicate test has @bug tag
-  isFlaky?: boolean; // Flag to indicate test is flaky (has retries)
-  isRecovered?: boolean; // Flag to indicate test has recovery
+  attempts?: number; // Number of test result attempts (for flaky detection)
   expectedStatus?: 'passed' | 'failed' | 'skipped';
   attachments?: {
     body: string | undefined | Buffer;
@@ -76,32 +75,35 @@ export default class ResultsParser {
       allTests = allTests.concat(suite.testSuite.tests);
     }
 
-    // Count our custom statuses from processed tests (with dual counting support)
+    // Count our custom statuses from processed tests
     const bugCount = allTests.filter(test => test.isBug === true).length;
-    const flakyCount = allTests.filter(test => (test as any).isFlaky || test.status === 'flaky').length;
+    // Recovered: tests with ChecksumAI intervention (status = 'recovered')
+    const recoveredCount = allTests.filter(test => test.status === 'recovered').length;
 
-    // Count recovered tests from both checksumMetadata AND processed test flags
-    let recoveredCount = 0;
+    // Flaky: Calculate based on checksumMetadata if available, otherwise use Playwright's count
+    let flakyCount = parsedData.stats.flaky;
+    let passedCount = parsedData.stats.expected;
+    let failedCount = parsedData.stats.unexpected;
 
-    // First check checksumMetadata (preferred method for ChecksumAI reports)
-    if (parsedData.checksumMetadata && parsedData.checksumMetadata.recovered !== undefined) {
-      // Use the recovered count directly from checksumMetadata
-      recoveredCount = parsedData.checksumMetadata.recovered;
-    } else if (parsedData.checksumMetadata && parsedData.checksumMetadata.tests) {
-      // Fallback: check individual test objects for recovered flag
-      recoveredCount = parsedData.checksumMetadata.tests.filter((test: any) =>
-        test.recovered === true
+    if (parsedData.checksumMetadata?.tests) {
+      // Count tests with outcome="flaky", excluding recovered tests that are NOT bugs
+      // (Bug tests that are recovered still count as flaky)
+      flakyCount = parsedData.checksumMetadata.tests.filter((test: any) =>
+        test.outcome === 'flaky' && (!test.recovered || test.bug)
       ).length;
-    } else {
-      // Fallback: count from processed tests (for reports with annotations but no metadata)
-      recoveredCount = allTests.filter(test =>
-        (test as any).isRecovered || test.status === 'recovered'
+
+      // Passed: tests with outcome="expected"
+      passedCount = parsedData.checksumMetadata.tests.filter((test: any) =>
+        test.outcome === 'expected'
       ).length;
+
+      // Failed: use checksumMetadata failed count (excludes bugs)
+      failedCount = parsedData.checksumMetadata.failed ?? 0;
     }
 
     const summary: SummaryResults = {
-      passed: parsedData.checksumMetadata?.passed ?? parsedData.stats.expected,
-      failed: parsedData.checksumMetadata?.failed ?? parsedData.stats.unexpected,
+      passed: passedCount,
+      failed: failedCount,
       flaky: flakyCount,
       skipped: parsedData.stats.skipped,
       bug: bugCount,
@@ -149,64 +151,58 @@ export default class ResultsParser {
         let reason = '';
         let lastResult = results[results.length - 1]; // Get the last (final) result
 
-        // Check if this is a recovered test
-        // Check for auto-recovery in annotations (supports both exact match and contains)
+        // Check if test has ChecksumAI intervention annotations
+        // This includes both successful (✅) and failed (❌) attempts
         isRecovered = test.annotations?.some((annotation: any) =>
           annotation.type && (
-            annotation.type === 'auto-recovered' ||
-            annotation.type.includes('auto-recovered')
+            annotation.type.includes('auto-recovered') ||
+            annotation.type.includes('✅') ||
+            annotation.type.includes('❌')
           )
         );
 
         // Check if this test is marked as a bug
-        // Only check test-level annotations to match backend logic
         const isBugTest = test.annotations?.some((annotation: any) =>
           annotation.type === 'bug'
         );
 
-        // Determine if test is flaky (has retries or marked as flaky)
-        let isFlaky = false;
+        // Determine final status
+        // Note: Tests can be both 'flaky' AND 'recovered' in the counting logic
         if (results.length > 1) {
+          // Multiple results means there were retries
           const firstFailed = results[0].status === 'failed' || results[0].status === 'timedOut';
           const finalPassed = lastResult.status === 'passed';
-          const hasFlaky = results.some((result: any) => result.status === 'flaky');
-          isFlaky = hasFlaky || (firstFailed && finalPassed);
-        }
-        
-        // Also check if any result is explicitly marked as flaky in the original report
-        const hasExplicitFlaky = results.some((result: any) => result.status === 'flaky');
-        if (hasExplicitFlaky) {
-          isFlaky = true;
-        }
-        
 
-        // Determine primary status - flaky and recovered can coexist
-        if (isRecovered && isFlaky) {
-          // Both flaky and recovered - use recovered as primary but mark as flaky too
+          if (firstFailed && finalPassed) {
+            // Test needed retries and eventually passed
+            // If it has ChecksumAI intervention, mark as recovered (will also count as flaky in stats)
+            if (isRecovered) {
+              finalStatus = 'recovered';
+              reason = results[0].error ? this.getFailure(results[0].error.snippet, results[0].error.stack) : '';
+            } else {
+              finalStatus = 'flaky';
+              reason = results[0].error ? this.getFailure(results[0].error.snippet, results[0].error.stack) : '';
+            }
+          } else {
+            finalStatus = lastResult.status === 'unexpected' ? 'failed' : lastResult.status;
+            reason = lastResult.error ? this.getFailure(lastResult.error.snippet, lastResult.error.stack) : '';
+          }
+        } else if (isRecovered && lastResult.status === 'passed') {
+          // Single result with ChecksumAI intervention that passed -> recovered
           finalStatus = 'recovered';
-          reason = lastResult.error ? this.getFailure(lastResult.error.snippet, lastResult.error.stack) : '';
-        } else if (isRecovered) {
-          finalStatus = 'recovered';
-          reason = lastResult.error ? this.getFailure(lastResult.error.snippet, lastResult.error.stack) : '';
-        } else if (isFlaky) {
-          finalStatus = 'flaky';
-          reason = results[0].error ? this.getFailure(results[0].error.snippet, results[0].error.stack) : '';
-        } else if (results.length > 1) {
-          finalStatus = lastResult.status === 'unexpected' ? 'failed' : lastResult.status;
           reason = lastResult.error ? this.getFailure(lastResult.error.snippet, lastResult.error.stack) : '';
         } else {
-          // Single result
+          // Single result without ChecksumAI intervention or failed
           finalStatus = lastResult.status === 'unexpected' ? 'failed' : lastResult.status;
           reason = lastResult.error ? this.getFailure(lastResult.error.snippet, lastResult.error.stack) : '';
         }
 
-        const testObj = {
+        testResults.push({
           suiteName,
           name: spec.title,
           status: finalStatus,
           isBug: isBugTest,
-          isFlaky: isFlaky, // Track flaky status separately
-          isRecovered: isRecovered, // Track recovered status separately
+          attempts: results.length, // Track number of attempts for flaky calculation
           browser: test.projectName,
           projectName: test.projectName,
           retry: lastResult.retry,
@@ -218,10 +214,7 @@ export default class ResultsParser {
           reason,
           attachments: lastResult.attachments,
           expectedStatus,
-        };
-        
-        
-        testResults.push(testObj);
+        });
       }
     }
     return testResults;
@@ -253,45 +246,26 @@ export default class ResultsParser {
     // eslint-disable-next-line no-plusplus
     for (const test of allTests) ++stats[test.outcome()];
 
-    // Count bug, recovered, and flaky statuses from our internal test results
+    // Count bug and recovered statuses from our internal test results
     let bugCount = 0;
     let recoveredCount = 0;
-    let flakyCount = 0;
-    let recoveredFromPassedCount = 0;
-    let flakyFromExpectedCount = 0;
-    
     for (const suite of this.result) {
       for (const test of suite.testSuite.tests) {
         if (test.status === 'bug') {
           bugCount += 1;
-        }
-        
-        // Count recovered tests (can overlap with flaky)
-        if ((test as any).isRecovered || test.status === 'recovered') {
+        } else if (test.status === 'recovered') {
           recoveredCount += 1;
-          if (test.expectedStatus === 'passed') {
-            recoveredFromPassedCount += 1;
-          }
-        }
-        
-        // Count flaky tests (can overlap with recovered)
-        if ((test as any).isFlaky || test.status === 'flaky') {
-          flakyCount += 1;
-          // If flaky test was originally expected to pass, adjust counts
-          if (test.expectedStatus === 'passed') {
-            flakyFromExpectedCount += 1;
-          }
         }
       }
     }
 
     const summary: SummaryResults = {
-      passed: stats.expected, // Use Playwright's expected count directly (matches backend)
+      passed: stats.expected,
       failed: stats.unexpected,
-      flaky: flakyCount, // Use our custom flaky count (can overlap with recovered)
+      flaky: stats.flaky,
       skipped: stats.skipped,
       bug: bugCount,
-      recovered: recoveredCount, // Use our custom recovered count (can overlap with flaky)
+      recovered: recoveredCount,
       failures,
       tests: [],
     };
@@ -305,12 +279,12 @@ export default class ResultsParser {
     const failures: Array<failure> = [];
     for (const suite of this.result) {
       for (const test of suite.testSuite.tests) {
-        // Only count actual failures, not bug tests (bugs are tracked separately)
         if (
-          (test.status === 'failed' || test.status === 'timedOut' || test.expectedStatus === 'failed')
-          && test.isBug !== true  // Exclude bug tests from failures
+          test.status === 'failed'
+          || test.status === 'timedOut'
+          || test.expectedStatus === 'failed'
         ) {
-          // Only flag as failed if the last attempt has failed
+          // only flag as failed if the last attempt has failed
           if (test.retries === test.retry) {
             failures.push({
               suite: test.suiteName,
